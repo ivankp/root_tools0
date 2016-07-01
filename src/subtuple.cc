@@ -10,7 +10,7 @@
 #include <TFile.h>
 #include <TTree.h>
 
-#include "timed_counter.hh"
+#include "timed_counter2.hh"
 
 using namespace std;
 
@@ -131,8 +131,9 @@ int main(int argc, char* argv[])
       bp.emplace_back(tin,tout,argv[i],argv[i+1],argv[i+2]);
   }
 
-  const Long64_t nent = tin->GetEntries();
-  for (timed_counter<Long64_t> ent; ent<nent; ++ent) {
+  // const auto nent = tin->GetEntries();
+  // for (timed_counter<Long64_t> ent; ent<nent; ++ent) {
+  for (timed_counter<Long64_t> ent(tin->GetEntries()); ent.ok(); ++ent) {
     tin->GetEntry(ent);
     tout->Fill();
   }

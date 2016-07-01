@@ -1,26 +1,23 @@
-#ifndef timed_counter_hh
-#define timed_counter_hh
+#ifndef timed_counter2_hh
+#define timed_counter2_hh
 
 #include <iostream>
 #include <iomanip>
 #include <chrono>
 
-template <typename I, typename Enable = void>
-class timed_counter { };
-
-template <typename I>
-class timed_counter <
-  I, typename std::enable_if<std::is_integral<I>::value>::type >
-{
+template <typename I, typename Compare = std::less<I>>
+class timed_counter {
 public:
-  using value_type    = I;
+  using value_type    = typename std::enable_if<std::is_integral<I>::value,I>::type;
+  using compare_type  = Compare;
   using clock_type    = std::chrono::system_clock;
   using time_type     = std::chrono::time_point<clock_type>;
   using duration_type = std::chrono::duration<double>;
 
 private:
-  value_type cnt;
+  value_type cnt, cnt_end;
   time_type start, last;
+  compare_type cmp;
 
   void print() {
     using std::cout;
@@ -45,18 +42,25 @@ private:
     }
 
     cout.flush();
-    if (hours)        for (int i=0;i<26;++i) cout << '\b';
-    else if (minutes) for (int i=0;i<20;++i) cout << '\b';
-    else              for (int i=0;i<18;++i) cout << '\b';
+    int nb = 18;
+    if (hours) nb += 8;
+    else if (minutes) nb += 2;
+    for (int i=0;i<18;++i) cout << '\b';
   }
   void print_check() {
     if ( duration_type(clock_type::now()-last).count() > 1 ) print();
   }
 
 public:
-  timed_counter(I i=0)
-  : cnt(i), start(clock_type::now()), last(start) { print(); }
+  timed_counter(I i, I n)
+  : cnt(i), cnt_end(n), start(clock_type::now()), last(start)
+  { print(); }
+  timed_counter(I n)
+  : cnt(0), cnt_end(n), start(clock_type::now()), last(start)
+  { print(); }
   ~timed_counter() { print(); std::cout << std::endl; }
+
+  inline bool ok() const noexcept { return cmp(cnt,cnt_end); }
 
   // prefix
   inline I operator++() { print_check(); return ++cnt; }
