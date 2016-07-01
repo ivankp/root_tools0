@@ -15,8 +15,10 @@ public:
   using duration_type = std::chrono::duration<double>;
 
 private:
-  value_type cnt, cnt_end;
-  time_type start, last;
+  value_type cnt;
+  const value_type cnt_start, cnt_end;
+  const time_type start;
+  time_type last;
   compare_type cmp;
 
   void print() {
@@ -28,13 +30,22 @@ private:
     const int hours   = dt/3600;
     const int minutes = (dt-hours*3600)/60;
     const int seconds = (dt-hours*3600-minutes*60);
+    int nb = 28;
 
     cout << setw(12) << cnt << " | ";
+    std::ios::fmtflags f(cout.flags());
+    cout.precision(2);
+    cout << std::fixed << setw(6) << (
+      cnt==cnt_start ? 0. : 100.*float(cnt-cnt_start)/float(cnt_end-cnt_start)
+    ) <<'%'<< " | ";
+    cout.flags(f);
     if (hours) {
+      nb += 8;
       cout << setw(5) << hours << ':'
       << setfill('0') << setw(2) << minutes << ':'
       << setw(2) << seconds << setfill(' ');
     } else if (minutes) {
+      nb += 2;
       cout << setw(2) << minutes << ':'
       << setfill('0') << setw(2) << seconds << setfill(' ');
     } else {
@@ -42,10 +53,7 @@ private:
     }
 
     cout.flush();
-    int nb = 18;
-    if (hours) nb += 8;
-    else if (minutes) nb += 2;
-    for (int i=0;i<18;++i) cout << '\b';
+    for (int i=0; i<nb; ++i) cout << '\b';
   }
   void print_check() {
     if ( duration_type(clock_type::now()-last).count() > 1 ) print();
@@ -53,10 +61,10 @@ private:
 
 public:
   timed_counter(I i, I n)
-  : cnt(i), cnt_end(n), start(clock_type::now()), last(start)
+  : cnt(i), cnt_start(i), cnt_end(n), start(clock_type::now()), last(start)
   { print(); }
   timed_counter(I n)
-  : cnt(0), cnt_end(n), start(clock_type::now()), last(start)
+  : cnt(0), cnt_start(0), cnt_end(n), start(clock_type::now()), last(start)
   { print(); }
   ~timed_counter() { print(); std::cout << std::endl; }
 
