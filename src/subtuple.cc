@@ -56,6 +56,7 @@ public:
          << old_branch_name << " > " << new_branch_name << endl;
 
     in->SetBranchStatus(old_branch_name.c_str(),1);
+    in->AddBranchToCache(old_branch_name.c_str(),kTRUE);
     if        (c == 'I') {
       in->SetBranchAddress(old_branch_name.c_str(),&x.I);
       out->Branch(new_branch_name.c_str(),&x.I,(new_branch_name+'/'+c).c_str());
@@ -114,6 +115,7 @@ int main(int argc, char* argv[])
          << " in file " << argv[1] << endl;
     return 1;
   }
+  tin->SetCacheSize(10000000);
 
   TFile* fout = new TFile(argv[3],"recreate");
   if (fout->IsZombie()) return 1;
