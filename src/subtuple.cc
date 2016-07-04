@@ -9,6 +9,8 @@
 
 #include <TFile.h>
 #include <TTree.h>
+#include <TTreeReader.h>
+#include <TTreeReaderValue.h>
 
 #include "timed_counter2.hh"
 
@@ -17,8 +19,7 @@ using namespace std;
 #define test(var) \
   std::cout <<"\033[36m"<< #var <<"\033[0m"<< " = " << var << std::endl;
 
-// https://root.cern.ch/doc/master/classTTree.html
-class branch_pipe {
+struct br_var {
   union {
     Int_t     I;
     UInt_t    i;
@@ -32,65 +33,100 @@ class branch_pipe {
     Short_t   S;
     UShort_t  s;
   } x;
-public:
-  branch_pipe(TTree* in, TTree* out,
-       const string& type_name,
-       const string& old_branch_name,
-       const string& new_branch_name)
-  {
-    char c;
-    if      (type_name=="Int_t"     || type_name=="I") c = 'I';
-    else if (type_name=="UInt_t"    || type_name=="i") c = 'i';
-    else if (type_name=="Float_t"   || type_name=="F") c = 'F';
-    else if (type_name=="Double_t"  || type_name=="D") c = 'D';
-    else if (type_name=="Long64_t"  || type_name=="L") c = 'L';
-    else if (type_name=="ULong64_t" || type_name=="l") c = 'l';
-    else if (type_name=="Bool_t"    || type_name=="O") c = 'O';
-    else if (type_name=="Char_t"    || type_name=="B") c = 'B';
-    else if (type_name=="UChar_t"   || type_name=="b") c = 'b';
-    else if (type_name=="Short_t"   || type_name=="S") c = 'S';
-    else if (type_name=="UShort_t"  || type_name=="s") c = 's';
-    else throw runtime_error("Unknown branch type "+type_name);
+  enum type_char : char {
+    I = 'I', i = 'i', F = 'F', D = 'D', L = 'L', l = 'l', O = 'O',
+    B = 'B', b = 'b', S = 'S', s = 's'
+  } type;
 
-    cout << type_name << ' '
-         << old_branch_name << " > " << new_branch_name << endl;
+  void set_type(const string& str) {
+    if      (str=="Int_t"    ) type = I;
+    else if (str=="UInt_t"   ) type = i;
+    else if (str=="Float_t"  ) type = F;
+    else if (str=="Double_t" ) type = D;
+    else if (str=="Long64_t" ) type = L;
+    else if (str=="ULong64_t") type = l;
+    else if (str=="Bool_t"   ) type = O;
+    else if (str=="Char_t"   ) type = B;
+    else if (str=="UChar_t"  ) type = b;
+    else if (str=="Short_t"  ) type = S;
+    else if (str=="UShort_t" ) type = s;
+    else throw runtime_error("Unexpected branch type "+str);
+  }
 
-    in->SetBranchStatus(old_branch_name.c_str(),1);
-    in->AddBranchToCache(old_branch_name.c_str(),kTRUE);
-    if        (c == 'I') {
-      in->SetBranchAddress(old_branch_name.c_str(),&x.I);
-      out->Branch(new_branch_name.c_str(),&x.I,(new_branch_name+'/'+c).c_str());
-    } else if (c == 'i') {
-      in->SetBranchAddress(old_branch_name.c_str(),&x.i);
-      out->Branch(new_branch_name.c_str(),&x.i,(new_branch_name+'/'+c).c_str());
-    } else if (c == 'F') {
-      in->SetBranchAddress(old_branch_name.c_str(),&x.F);
-      out->Branch(new_branch_name.c_str(),&x.F,(new_branch_name+'/'+c).c_str());
-    } else if (c == 'D') {
-      in->SetBranchAddress(old_branch_name.c_str(),&x.D);
-      out->Branch(new_branch_name.c_str(),&x.D,(new_branch_name+'/'+c).c_str());
-    } else if (c == 'L') {
-      in->SetBranchAddress(old_branch_name.c_str(),&x.L);
-      out->Branch(new_branch_name.c_str(),&x.L,(new_branch_name+'/'+c).c_str());
-    } else if (c == 'l') {
-      in->SetBranchAddress(old_branch_name.c_str(),&x.l);
-      out->Branch(new_branch_name.c_str(),&x.l,(new_branch_name+'/'+c).c_str());
-    } else if (c == 'O') {
-      in->SetBranchAddress(old_branch_name.c_str(),&x.O);
-      out->Branch(new_branch_name.c_str(),&x.O,(new_branch_name+'/'+c).c_str());
-    } else if (c == 'B') {
-      in->SetBranchAddress(old_branch_name.c_str(),&x.B);
-      out->Branch(new_branch_name.c_str(),&x.B,(new_branch_name+'/'+c).c_str());
-    } else if (c == 'b') {
-      in->SetBranchAddress(old_branch_name.c_str(),&x.b);
-      out->Branch(new_branch_name.c_str(),&x.b,(new_branch_name+'/'+c).c_str());
-    } else if (c == 'S') {
-      in->SetBranchAddress(old_branch_name.c_str(),&x.S);
-      out->Branch(new_branch_name.c_str(),&x.S,(new_branch_name+'/'+c).c_str());
-    } else if (c == 's') {
-      in->SetBranchAddress(old_branch_name.c_str(),&x.s);
-      out->Branch(new_branch_name.c_str(),&x.s,(new_branch_name+'/'+c).c_str());
+  const char* get_type() const noexcept {
+    #define var_type_case(c,T) case c: return #T;
+    switch (type) {
+      var_type_case(I,Int_t)
+      var_type_case(i,UInt_t)
+      var_type_case(F,Float_t)
+      var_type_case(D,Double_t)
+      var_type_case(L,Long64_t)
+      var_type_case(l,ULong64_t)
+      var_type_case(O,Bool_t)
+      var_type_case(B,Char_t)
+      var_type_case(b,UChar_t)
+      var_type_case(S,Short_t)
+      var_type_case(s,UShort_t)
+      default: return "";
     }
+    #undef var_type_case
+  }
+
+  void set_val(void* ptr, bool is_ptr) noexcept {
+    #define var_type_case(c,T) \
+      case c: x.c = *(is_ptr ? *(T**)ptr : (T*)ptr); break;
+    switch (type) {
+      var_type_case(I,Int_t)
+      var_type_case(i,UInt_t)
+      var_type_case(F,Float_t)
+      var_type_case(D,Double_t)
+      var_type_case(L,Long64_t)
+      var_type_case(l,ULong64_t)
+      var_type_case(O,Bool_t)
+      var_type_case(B,Char_t)
+      var_type_case(b,UChar_t)
+      var_type_case(S,Short_t)
+      var_type_case(s,UShort_t)
+    }
+    #undef var_type_case
+  }
+
+  void branch(TTree* tree, const string& br) noexcept {
+    #define var_type_case(c) \
+      case c: tree->Branch(br.c_str(), &x.c, (br + "/" #c).c_str()); break;
+    switch (type) {
+      var_type_case(I)
+      var_type_case(i)
+      var_type_case(F)
+      var_type_case(D)
+      var_type_case(L)
+      var_type_case(l)
+      var_type_case(O)
+      var_type_case(B)
+      var_type_case(b)
+      var_type_case(S)
+      var_type_case(s)
+    }
+    #undef var_type_case
+  }
+};
+
+class TTreeReaderValuePipe: public ROOT::Internal::TTreeReaderValueBase {
+  br_var val;
+public:
+  TTreeReaderValuePipe(
+    TTreeReader& tr, const char* type, const char* ibr,
+    TTree* tree, const string& obr
+  ): TTreeReaderValueBase(&tr, ibr, TDictionary::GetDictionary(type))
+  {
+    val.set_type(type);
+    val.branch(tree,obr);
+  }
+
+  void Get() { val.set_val(GetAddress(),fProxy->IsaPointer()); }
+
+  virtual const char* GetDerivedTypeName() const {
+    return val.get_type();
   }
 };
 
@@ -98,7 +134,7 @@ int main(int argc, char* argv[])
 {
   if (argc!=6 && (argc-5)%3) {
     cout << "usage: " << argv[0]
-         << "\n  input_file.root input_tree"
+         << "\n  input_file.root [input_tree] [event_range]"
             "\n  output_file.root output_tree"
             "\n  branch_list_file"
             "\nor"
@@ -109,34 +145,27 @@ int main(int argc, char* argv[])
   TFile* fin = new TFile(argv[1],"read");
   if (fin->IsZombie()) return 1;
   cout << "Input file: " << fin->GetName() << endl;
-  TTree* tin = static_cast<TTree*>(fin->Get(argv[2]));
-  if (!tin) {
-    cerr << "No TTree " << argv[2]
-         << " in file " << argv[1] << endl;
-    return 1;
-  }
-  tin->SetCacheSize(10000000);
+  TTreeReader reader(argv[2], fin);
 
   TFile* fout = new TFile(argv[3],"recreate");
   if (fout->IsZombie()) return 1;
   cout << "Output file: " << fout->GetName() << endl;
-  TTree* tout = new TTree(argv[4],tin->GetTitle());
+  TTree* tout = new TTree(argv[4],"");
 
-  tin->SetBranchStatus("*",0);
-
-  vector<branch_pipe> bp;
+  vector<TTreeReaderValuePipe> pipes;
   if (argc==6) {
 
   } else {
-    bp.reserve((argc-5)/3);
+    pipes.reserve((argc-5)/3);
     for (int i=5; i<argc; i+=3)
-      bp.emplace_back(tin,tout,argv[i],argv[i+1],argv[i+2]);
+      pipes.emplace_back(reader,argv[i],argv[i+1],tout,argv[i+2]);
   }
 
   // const auto nent = tin->GetEntries();
   // for (timed_counter<Long64_t> ent; ent<nent; ++ent) {
-  for (timed_counter<Long64_t> ent(tin->GetEntries()); ent.ok(); ++ent) {
-    tin->GetEntry(ent);
+  for (timed_counter<Long64_t> ent(reader.GetEntries(true)); reader.Next(); ++ent)
+  {
+    for (auto& p : pipes) p.Get();
     tout->Fill();
   }
 

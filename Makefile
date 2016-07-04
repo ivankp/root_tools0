@@ -7,6 +7,7 @@ ROOT_CFLAGS := $(shell root-config --cflags)
 ROOT_LIBS   := $(shell root-config --libs)
 
 LIBS_overlay := $(ROOT_LIBS) -lboost_program_options -lboost_regex
+LIBS_subtuple := $(ROOT_LIBS) -lTreePlayer
 
 .PHONY: all clean
 
