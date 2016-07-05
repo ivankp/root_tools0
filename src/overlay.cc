@@ -24,6 +24,7 @@
 #include <TLegend.h>
 #include <TLine.h>
 #include <TStyle.h>
+#include <TPaveStats.h>
 
 #define test(var) \
   std::cout <<"\033[36m"<< #var <<"\033[0m"<< " = " << var << std::endl;
@@ -92,7 +93,8 @@ int main(int argc, char **argv)
   vector<Style_t> styles;
   vector<Width_t> widths;
   pair<double,double> yrange(0.,0.);
-  bool legend, stats,
+  int stats;
+  bool legend,
        logx, morelogx, noexpx,
        logy, morelogy, noexpy;
   vector<double> hliney, vlinex;
@@ -119,7 +121,8 @@ int main(int argc, char **argv)
       ("regex.ytitle", po::value(&ytitle), "vertical axis title")
 
       ("legend,l", po::bool_switch(&legend), "draw legend")
-      ("stats", po::bool_switch(&stats), "draw stats box")
+      ("stats", po::value(&stats)->default_value(0),
+       "draw stats box: e.g. 111110")
 
       ("file-label", po::value(&iflbl)->multitoken(),
        "labels associated with input files")
@@ -209,7 +212,7 @@ int main(int argc, char **argv)
   // Draw *************************************************
   vector<TLine> hline(hliney.size()), vline(vlinex.size());
 
-  if (stats) gStyle->SetOptStat(111110);
+  if (stats) gStyle->SetOptStat(stats);
 
   TCanvas canv;
   canv.SetLogx(logx);
@@ -290,6 +293,10 @@ int main(int argc, char **argv)
 
     h->SetStats(stats && hp.second.size()==1);
     h->Draw();
+    if (stats && hp.second.size()==1) {
+      auto* stat_box = static_cast<TPaveStats*>(h->FindObject("stats"));
+      if (stat_box) stat_box->SetFillColorAlpha(0,0.65);
+    }
 
     for (size_t i=1, n=hp.second.size(); i<n; ++i) {
       h = hp.second[i];
