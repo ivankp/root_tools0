@@ -1,4 +1,4 @@
-EXE := overlay subtuple
+EXE := overlay subtuple test
 
 CXXFLAGS := -std=c++11 -Wall -O3
 LIBFLAGS := -Wl,--as-needed
@@ -9,14 +9,18 @@ ROOT_LIBS   := $(shell root-config --libs)
 LIBS_overlay := $(ROOT_LIBS) -lboost_program_options -lboost_regex
 LIBS_subtuple := $(ROOT_LIBS) -lTreePlayer
 
+FLAGS_test := -DDEBUG
+LIBS_test := -lboost_regex
+
 .PHONY: all clean
 
 all: $(EXE:%=bin/%)
 
 bin/subtuple: src/timed_counter2.hh
+bin/test: src/in.hh src/re_mod_base.hh src/re_mod_base.cc
 
 bin/%: src/%.cc | bin
-	g++ $(CXXFLAGS) $(ROOT_CFLAGS) $(filter %.cc,$^) -o $@ $(LIBFLAGS) $(ROOT_LIBS) $(LIBS_$*)
+	g++ $(CXXFLAGS) $(ROOT_CFLAGS) $(FLAGS_$*) $(filter %.cc,$^) -o $@ $(LIBFLAGS) $(ROOT_LIBS) $(LIBS_$*)
 
 bin:
 	mkdir $@
