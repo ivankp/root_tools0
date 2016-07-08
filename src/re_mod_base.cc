@@ -61,7 +61,7 @@ void re_mod_base::init(const std::string& str) {
       } else ++it;
     }
     test(re_str)
-    // re = new std::decay<decltype(*re)>::type(re_str);
+    re = new std::decay<decltype(*re)>::type(re_str);
   } else if (re) {
     delete re;
     re = nullptr;
