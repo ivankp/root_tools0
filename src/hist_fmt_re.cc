@@ -17,13 +17,13 @@ void hist_fmt_re::init(const std::string& str) {
     "Cannot make hist_fmt_re from empty string");
 
   // set flag bits
-  bool from = false, to = false;
+  bool from = false, to = false, prev_fromto = false;
   for (const char *c = it->c_str(); *c!='\0'; ++c) {
     bool fromto = false;
     switch (*c) {
-      case 'r': flags.r = 1; continue;
-      case 's': flags.s = 1; continue;
-      case 'i': flags.i = 1; continue;
+      case 'r': flags.r = 1; prev_fromto = false; continue;
+      case 's': flags.s = 1; prev_fromto = false; continue;
+      case 'i': flags.i = 1; prev_fromto = false; continue;
       case 'g': flags.to = 0; fromto = true; break; // group
       case 't': flags.to = 1; fromto = true; break; // title
       case 'x': flags.to = 2; fromto = true; break; // x title
@@ -40,14 +40,15 @@ void hist_fmt_re::init(const std::string& str) {
         flags.from = flags.to;
       } else if (!to) to = true;
       else throw std::runtime_error("too many from/to flags in "+str);
+      prev_fromto = true;
     } else if (isdigit(*c)) {
-      if (fromto) {
+      if (prev_fromto) {
         std::string num_str;
         num_str.reserve(4);
         for (; isdigit(*c); ++c) num_str += *c;
         unsigned num = stoi(num_str);
         if (num>254) throw std::runtime_error(
-          "overly large number "+num_str+" in "+str);
+          "number "+num_str+" is too large in "+str);
         if (to) flags.to_i = num;
         else flags.from_i = num;
       } else throw std::runtime_error(
