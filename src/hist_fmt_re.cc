@@ -17,22 +17,56 @@ void hist_fmt_re::init(const std::string& str) {
     "Cannot make hist_fmt_re from empty string");
 
   // set flag bits
-  // 0: group
-  // 1: name
-  // 2: title
-  // 3: x title
-  // 4: y title
-  // 5: legend
-  // 6: file
-  // 7: directories
-  // TODO: implement
+  bool from = false, to = false;
+  for (const char* c=it->c_str(); *c!='\0'; ++c) {
+    bool fromto = false;
+    switch (*c) {
+      case 'r': flags.r = 1; break;
+      case 's': flags.s = 1; break;
+      case 'i': flags.i = 1; break;
+      case 'g': flags.to = 0; fromto = true; break; // group
+      case 't': flags.to = 1; fromto = true; break; // title
+      case 'x': flags.to = 2; fromto = true; break; // x title
+      case 'y': flags.to = 3; fromto = true; break; // y title
+      case 'l': flags.to = 4; fromto = true; break; // legend
+      case 'n': flags.to = 5; fromto = true; break; // name
+      case 'f': flags.to = 6; fromto = true; break; // file
+      case 'd': flags.to = 7; fromto = true; break; // directories
+      default: break;
+    }
+    if (fromto) {
+      if (!from) {
+        from = true;
+        flags.from = flags.to;
+      } else if (!to) to = true;
+      else throw std::runtime_error("too many from/to flags in "+*it);
+    } else if (isdigit(*c)) {
+      if (fromto) {
+        std::string num_str;
+        num_str.reserve(4);
+        for (; isdigit(*c); ++c) num_str += *c;
+        unsigned num = stoi(num_str);
+        if (num>254) throw std::runtime_error(
+          "overly large number "+num+" in "+*it);
+        if (to) flags.to_i = num;
+        else flags.from_i = num;
+      } else throw std::runtime_error(
+        "number not preceded by from/to flags in "+*it);
+    } else throw std::runtime_error("unknown flag "+*c+" in "+*it);
+  }
+  if (!from) throw std::runtime_error("no from/to flags specified in "+*it);
   if ((++it)==end) return;
 
   // set re
   if (it->size()) re = new boost::regex(*it);
   if ((++it)==end) return;
 
+  // set subst
+  if (it->size()) subst = std::move(*it);
+  if ((++it)==end) return;
+
   // set fmt_fcns
+  fmt_fcns.reserve(end-it);
   for (; it!=end; ++it) fmt_fcns.emplace_back(*it);
 }
 
@@ -45,6 +79,7 @@ std::istream& operator>>(std::istream& in, hist_fmt_re& ref) {
 
 bool hist_fmt_re::apply(TH1* h) const {
   // TODO: apply regex matching
+  // TODO: containers for intermediate strings
   for (const auto& fcn : fmt_fcns) fcn.apply(h);
 }
 

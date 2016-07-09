@@ -24,9 +24,9 @@ public:
 
 class hist_fmt_re {
   struct flags_t {
-    unsigned int r : 1; // remove not matching (selection)
-    unsigned int s : 1; // substitute
-    unsigned int i : 1; // invert selection or substitution
+    unsigned int r : 1; // replace
+    unsigned int s : 1; // select
+    unsigned int i : 1; // invert selection
     unsigned int : 0;
     unsigned int from : 4; // string source
     unsigned int to   : 4; // string being set
@@ -35,17 +35,14 @@ class hist_fmt_re {
     flags_t(): r(0), s(0), i(0), from(0), to(0), from_i(255), to_i(255) { }
   } flags;
   boost::regex *re;
-  std::string *subst;
+  std::string subst;
   std::vector<hist_fmt_fcn> fmt_fcns;
 public:
   void init(const std::string& str);
   hist_fmt_re(): flags(), re(nullptr), subst(nullptr), fmt_fcns() { }
   hist_fmt_re(const std::string& str)
   : flags(), re(nullptr), subst(nullptr), fmt_fcns() { init(str); }
-  ~hist_fmt_re() {
-    if (re) delete re;
-    if (subst) delete subst;
-  }
+  ~hist_fmt_re() { if (re) delete re; }
 
   hist_fmt_re(const hist_fmt_re& o)
   : flags(o.flags), re(o.re), subst(o.subst), fmt_fcns(o.fmt_fcns) { }
