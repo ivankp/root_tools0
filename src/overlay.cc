@@ -5,7 +5,6 @@
 #include <iterator>
 #include <vector>
 #include <string>
-#include <tuple>
 #include <unordered_map>
 #include <memory>
 #include <algorithm>
@@ -13,8 +12,8 @@
 #include <limits>
 #include <tuple>
 
-#include <boost/regex.hpp>
 #include <boost/program_options.hpp>
+#include <boost/regex.hpp>
 
 #include <TFile.h>
 #include <TKey.h>
@@ -25,6 +24,9 @@
 #include <TLine.h>
 #include <TStyle.h>
 #include <TPaveStats.h>
+
+#include "ring.hh"
+// #include "hist_fmt_re.hh"
 
 #define test(var) \
   std::cout <<"\033[36m"<< #var <<"\033[0m"<< " = " << var << std::endl;
@@ -44,15 +46,6 @@ namespace std {
     return in;
   }
 }
-
-/*string subst(string in, const string& sub){
-  size_t var = 0;
-  while ((var = in.find('%',var))!=string::npos) {
-    in = in.substr(0,var) + sub + in.substr(var+1);
-    var += sub.size();
-  }
-  return in;
-};*/
 
 class regsub {
   vector<pair<boost::regex,string>> re;
@@ -89,9 +82,9 @@ int main(int argc, char **argv)
 {
   string ofname, cfname;
   vector<string> ifname, iflbl;
-  vector<Color_t> colors;
-  vector<Style_t> styles;
-  vector<Width_t> widths;
+  ring<Color_t> color;
+  ring<Style_t> style;
+  ring<Width_t> width;
   pair<double,double> yrange(0.,0.);
   int stats;
   bool legend,
@@ -126,13 +119,13 @@ int main(int argc, char **argv)
 
       ("file-label", po::value(&iflbl)->multitoken(),
        "labels associated with input files")
-      ("colors", po::value(&colors)->multitoken()->
+      ("colors", po::value(color.v_ptr())->multitoken()->
         default_value({602,46}, "{602,46}"),
        "histograms colors")
-      ("styles", po::value(&styles)->multitoken()->
+      ("styles", po::value(style.v_ptr())->multitoken()->
         default_value({1}, "{1}"),
        "histograms line styles")
-      ("widths", po::value(&widths)->multitoken()->
+      ("widths", po::value(width.v_ptr())->multitoken()->
         default_value({2}, "{2}"),
        "histograms line widths")
       ("yrange,y", po::value(&yrange),
@@ -168,10 +161,6 @@ int main(int argc, char **argv)
     return 1;
   }
   // end options ---------------------------------------------------
-
-  auto color = [&colors](size_t i){ return colors[i%colors.size()]; };
-  auto style = [&styles](size_t i){ return styles[i%styles.size()]; };
-  auto width = [&widths](size_t i){ return widths[i%widths.size()]; };
 
   vector<unique_ptr<TFile>> ff;
   vector<pair<string,vector<TH1*>>> hh;
@@ -224,10 +213,10 @@ int main(int argc, char **argv)
 
     h = hp.second.front();
     h->SetStats(false);
-    h->SetLineWidth(width(0));
-    h->SetLineStyle(style(0));
-    h->SetLineColor(color(0));
-    h->SetMarkerColor(color(0));
+    h->SetLineWidth(width[0]);
+    h->SetLineStyle(style[0]);
+    h->SetLineColor(color[0]);
+    h->SetMarkerColor(color[0]);
     if (hist_title)
       h->SetTitle(hist_title(h->GetName()).c_str());
 
@@ -300,10 +289,10 @@ int main(int argc, char **argv)
 
     for (size_t i=1, n=hp.second.size(); i<n; ++i) {
       h = hp.second[i];
-      h->SetLineWidth(width(i));
-      h->SetLineStyle(style(i));
-      h->SetLineColor(color(i));
-      h->SetMarkerColor(color(i));
+      h->SetLineWidth(width[i]);
+      h->SetLineStyle(style[i]);
+      h->SetLineColor(color[i]);
+      h->SetMarkerColor(color[i]);
       h->Draw("same");
     }
 

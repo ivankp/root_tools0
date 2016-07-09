@@ -19,6 +19,7 @@ LIBS_subtuple := $(ROOT_LIBS) -lTreePlayer
 all: $(EXE:%=bin/%)
 
 bin/subtuple: src/timed_counter2.hh
+bin/overlay: src/ring.hh
 bin/test: src/*.hh
 
 bin/%: src/%.cc | bin
