@@ -19,7 +19,7 @@ LIBS_subtuple := $(ROOT_LIBS) -lTreePlayer
 all: $(EXE:%=bin/%)
 
 bin/subtuple: src/timed_counter2.hh
-bin/test: src/block_split.hh src/block_split.cc
+bin/test: src/*.hh
 
 bin/%: src/%.cc | bin
 	g++ $(CXXFLAGS) $(FLAGS_$*) $(filter %.cc,$^) -o $@ $(LIBS_$*)

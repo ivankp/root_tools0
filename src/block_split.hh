@@ -5,6 +5,6 @@
 #include <vector>
 
 std::vector<std::string>
-block_split(const std::string& str, const std::string& delims="/|:");
+block_split(const std::string& str, const std::string& delims);
 
 #endif
