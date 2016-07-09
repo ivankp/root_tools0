@@ -13,7 +13,7 @@ struct substr {
   inline const char* data() const noexcept { return ptr; }
   inline size_t size() const noexcept { return n; }
 
-  std::string str() { return std::move(std::string(ptr,n)); }
+  std::string str() const { return std::move(std::string(ptr,n)); }
 
   bool operator==(const std::string& str) {
     if (str.size()!=n) return false;

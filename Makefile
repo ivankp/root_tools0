@@ -11,8 +11,8 @@ LIBS_overlay := $(ROOT_LIBS) -lboost_program_options -lboost_regex
 FLAGS_subtuple := $(ROOT_CFLAGS)
 LIBS_subtuple := $(ROOT_LIBS) -lTreePlayer
 
-# FLAGS_test := -DDEBUG -DUSE_STD_REGEX
-# LIBS_test := -lboost_regex
+FLAGS_test := $(ROOT_CFLAGS)
+LIBS_test := $(ROOT_LIBS) -lboost_regex
 
 .PHONY: all clean
 
@@ -20,7 +20,7 @@ all: $(EXE:%=bin/%)
 
 bin/subtuple: src/timed_counter2.hh
 bin/overlay: src/ring.hh
-bin/test: src/*.hh
+bin/test: src/*.hh src/block_split.cc src/hist_fmt_re.cc
 
 bin/%: src/%.cc | bin
 	g++ $(CXXFLAGS) $(FLAGS_$*) $(filter %.cc,$^) -o $@ $(LIBS_$*)
