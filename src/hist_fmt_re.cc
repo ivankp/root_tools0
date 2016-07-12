@@ -2,13 +2,20 @@
 
 #include <cctype>
 #include <tuple>
+#include <array>
+#include <memory>
 #include <stdexcept>
 #include <boost/regex.hpp>
 #include <TH1.h>
+#include <TDirectory.h>
 
 #include "block_split.hh"
 #include "substr.hh"
 #include "interpreted_args.hh"
+
+#include <iostream>
+#define test(var) \
+std::cout <<"\033[36m"<< #var <<"\033[0m"<< " = " << var << std::endl;
 
 void hist_fmt_re::init(const std::string& str) {
   auto blocks = block_split(str,"/|:");
@@ -21,17 +28,28 @@ void hist_fmt_re::init(const std::string& str) {
   for (const char *c = it->c_str(); *c!='\0'; ++c) {
     bool fromto = false;
     switch (*c) {
-      case 'r': flags.r = 1; prev_fromto = false; continue;
       case 's': flags.s = 1; prev_fromto = false; continue;
       case 'i': flags.i = 1; prev_fromto = false; continue;
-      case 'g': flags.to = 0; fromto = true; break; // group
-      case 't': flags.to = 1; fromto = true; break; // title
-      case 'x': flags.to = 2; fromto = true; break; // x title
-      case 'y': flags.to = 3; fromto = true; break; // y title
-      case 'l': flags.to = 4; fromto = true; break; // legend
-      case 'n': flags.to = 5; fromto = true; break; // name
-      case 'f': flags.to = 6; fromto = true; break; // file
-      case 'd': flags.to = 7; fromto = true; break; // directories
+      case 'g': flags.to = flags_t::g; fromto = true; break; // group
+      case 't': flags.to = flags_t::t; fromto = true; break; // title
+      case 'x': flags.to = flags_t::x; fromto = true; break; // x title
+      case 'y': flags.to = flags_t::y; fromto = true; break; // y title
+      case 'l': flags.to = flags_t::l; fromto = true; break; // legend
+      case 'n': flags.to = flags_t::n; fromto = true; break; // name
+      case 'f': flags.to = flags_t::f; fromto = true; break; // file
+      case 'd': flags.to = flags_t::d; fromto = true; break; // directories
+      case '+': { // concatenate
+        // mod 0 = none
+        // mod 1 = replace
+        // mod 2 = append
+        // mod 3 = prepend
+        if (flags.mod) throw std::runtime_error("too many \'+\' in "+str);
+        if (to) flags.mod = 2;
+        else if (from) flags.mod = 3;
+        else throw std::runtime_error("\'+\' without \'from/to\' in "+str);
+        prev_fromto = false;
+        continue;
+      }
       default: break;
     }
     if (fromto) {
@@ -39,27 +57,36 @@ void hist_fmt_re::init(const std::string& str) {
         from = true;
         flags.from = flags.to;
       } else if (!to) to = true;
-      else throw std::runtime_error("too many from/to flags in "+str);
+      else throw std::runtime_error("too many \'from/to\' flags in "+str);
       prev_fromto = true;
-    } else if (isdigit(*c)) {
+    } else if (isdigit(*c) || *c=='-') {
       if (prev_fromto) {
+        if (to) throw std::runtime_error("number after \'to\' in "+str);
         std::string num_str;
         num_str.reserve(4);
-        for (; isdigit(*c); ++c) num_str += *c;
-        unsigned num = stoi(num_str);
-        if (num>254) throw std::runtime_error(
+        for (; isdigit(*c) || *c=='-'; ++c) num_str += *c;
+        --c; // to prevent incrementing past the first char after digits
+        signed int num = stoi(num_str);
+        if (num>127 || num<-128) throw std::runtime_error(
           "number "+num_str+" is too large in "+str);
-        if (to) flags.to_i = num;
-        else flags.from_i = num;
-      } else throw std::runtime_error(
-        "number not preceded by from/to flags in "+str);
+        flags.from_i = num;
+      } else throw std::runtime_error("number not preceded by \'from\' in "+str);
     } else throw std::runtime_error("unknown flag "+(*c+(" in "+str)));
   }
-  if (!from) throw std::runtime_error("no from/to flags specified in "+str);
+  if (flags.mod && !to) throw std::runtime_error(
+    "expected \'to\' after \'+\' in "+str);
+  if (from && to && !flags.mod) flags.mod = 1;
+  test(flags.from)
+  test(flags.from_i)
+  test(flags.to)
+  test(flags.s)
+  test(flags.i)
+  test(flags.mod)
   if ((++it)==end) return;
 
   // set re
   if (it->size()) re = new boost::regex(*it);
+  if (re && !flags.mod) flags.mod = 1;
   if ((++it)==end) return;
 
   // set subst
@@ -69,6 +96,83 @@ void hist_fmt_re::init(const std::string& str) {
   // set fmt_fcns
   fmt_fcns.reserve(end-it);
   for (; it!=end; ++it) fmt_fcns.emplace_back(*it);
+}
+
+using shared_str = std::shared_ptr<std::string>;
+
+shared_str get_hist_str(
+  hist_fmt_re::hist_wrap& h, hist_fmt_re::flags_t::fromto flag)
+{
+  std::string str;
+  using flags_t = hist_fmt_re::flags_t;
+  switch (flag) {
+    case flags_t::g: str = h.group; break;
+    case flags_t::t: str = h.h->GetTitle(); break;
+    case flags_t::x: str = h.h->GetXaxis()->GetTitle(); break;
+    case flags_t::y: str = h.h->GetYaxis()->GetTitle(); break;
+    case flags_t::l: str = h.legend; break;
+    case flags_t::n: str = h.h->GetName(); break;
+    case flags_t::f: str = h.h->GetDirectory()->GetName(); break;
+    case flags_t::d: str = h.h->GetDirectory()->GetName(); break;
+    // TODO: get file name
+  }
+  return std::move(std::make_shared<std::string>(std::move(str)));
+}
+
+bool apply(
+  hist_fmt_re::hist_wrap& h,
+  const std::vector<hist_fmt_re>& expressions)
+{
+  // array of temporary strings
+  std::array<std::vector<shared_str>,8> share;
+  for (auto& v : share) { v.reserve(2); v.emplace_back(); }
+
+  // loop over expressions
+  for (const auto& re : expressions) {
+    // get the string
+    auto& vec = share[re.flags.from];
+    int index = re.flags.from_i;
+    if (index<0) index += vec.size();
+    if (index<0 || (unsigned(index))>vec.size())
+      throw std::runtime_error("bad string version index");
+    auto& str = vec[index];
+    if (!str) str = get_hist_str(h,re.flags.from);
+
+    if (re.re) { // applying regex
+      // match
+      boost::smatch matches;
+      bool matched = boost::regex_match(*str, matches, *re.re);
+      if (re.flags.s && !matched) return false;
+
+      // replace
+      share[re.flags.to].emplace_back(std::make_shared<std::string>(
+        boost::regex_replace(*str, *re.re, re.subst,
+          boost::match_default | boost::format_sed)
+      ));
+    } else if (re.flags.mod) { // no regex, modify
+      if (re.flags.mod==1) // no copy, share
+        share[re.flags.to].emplace_back(str);
+      else // need a copy
+        share[re.flags.to].emplace_back(std::make_shared<std::string>(*str));
+    }
+
+    // concatenate if necessary
+    if (re.flags.mod>1) {
+      auto& v_to = share[re.flags.to];
+      auto& str_to = *(v_to.end()-2);
+      if (!str_to) str_to = get_hist_str(h,re.flags.from);
+
+      switch (re.flags.mod) {
+        case 2: *v_to.back() = *str_to + *v_to.back(); break;
+        case 3:  v_to.back()->append(*str_to); break;
+        default: break;
+      }
+    }
+
+    // apply functions
+    for (const auto& fcn : re.fmt_fcns) fcn.apply(h.h);
+  } // end expression loop
+  return true;
 }
 
 hist_fmt_re::~hist_fmt_re() { if (re) delete re; }
@@ -103,13 +207,6 @@ std::istream& operator>>(std::istream& in, hist_fmt_re& ref) {
   return in;
 }
 
-bool hist_fmt_re::apply(TH1* h) const {
-  // TODO: apply regex matching
-  // TODO: containers for intermediate strings
-  for (const auto& fcn : fmt_fcns) fcn.apply(h);
-  return true;
-}
-
 // ******************************************************************
 
 struct hist_fmt_fcn_SetLineColor
@@ -135,6 +232,9 @@ struct hist_fmt_fcn_SetLineWidth
 // syntax: function=arg1,arg2,arg3
 // spaces don't matter
 hist_fmt_fcn::hist_fmt_fcn(const std::string& str) {
+  if (str.size()==0) throw std::runtime_error(
+    "blank string in regex function field");
+
   std::vector<substr> tokens;
   const char* c = str.c_str();
   const char* begin = c;

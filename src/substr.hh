@@ -15,11 +15,11 @@ struct substr {
 
   std::string str() const { return std::move(std::string(ptr,n)); }
 
-  bool operator==(const std::string& str) {
+  bool operator==(const std::string& str) const {
     if (str.size()!=n) return false;
     return std::equal(ptr, ptr+n, str.data());
   }
-  bool operator<(const std::string& str) {
+  bool operator<(const std::string& str) const {
     return std::lexicographical_compare(
       ptr, ptr+n, str.data(), str.data()+str.size());
   }

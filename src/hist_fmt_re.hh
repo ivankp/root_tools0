@@ -23,17 +23,24 @@ public:
 };
 
 class hist_fmt_re {
+public:
+  struct hist_wrap {
+    TH1 *h;
+    std::string group, legend;
+  };
   struct flags_t {
-    unsigned int r : 1; // replace
-    unsigned int s : 1; // select
-    unsigned int i : 1; // invert selection
-    unsigned int : 0;
-    unsigned int from : 4; // string source
-    unsigned int to   : 4; // string being set
-    unsigned int from_i : 8;
-    unsigned int to_i   : 8;
-    flags_t(): r(0), s(0), i(0), from(0), to(0), from_i(255), to_i(255) { }
-  } flags;
+    enum fromto { g=0, t=1, x=2, y=3, l=4, n=5, f=6, d=7 };
+    unsigned int s    : 1; // select
+    unsigned int i    : 1; // invert selection
+    unsigned int mod  : 2; // mod
+    unsigned int      : 0;
+    fromto       from : 4; // string source
+    fromto       to   : 4; // string being set
+    signed int from_i : 8; // python index sign convention
+    flags_t(): s(0), i(0), mod(0), from(g), to(g), from_i(-1) { }
+  };
+private:
+  flags_t flags;
   boost::regex *re;
   std::string subst;
   std::vector<hist_fmt_fcn> fmt_fcns;
@@ -49,7 +56,7 @@ public:
   hist_fmt_re& operator=(const hist_fmt_re& o);
   hist_fmt_re& operator=(hist_fmt_re&& o);
 
-  bool apply(TH1* h) const;
+  friend bool apply(hist_wrap& h, const std::vector<hist_fmt_re>& expressions);
 };
 
 std::istream& operator>>(std::istream& in, hist_fmt_re& ref);
