@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <boost/regex.hpp>
 #include <TH1.h>
+#include <TAxis.h>
 #include <TDirectory.h>
 
 #include "block_split.hh"
@@ -76,12 +77,12 @@ void hist_fmt_re::init(const std::string& str) {
   if (flags.mod && !to) throw std::runtime_error(
     "expected \'to\' after \'+\' in "+str);
   if (from && to && !flags.mod) flags.mod = 1;
-  test(flags.from)
-  test(flags.from_i)
-  test(flags.to)
-  test(flags.s)
-  test(flags.i)
-  test(flags.mod)
+  // test(flags.from)
+  // test(flags.from_i)
+  // test(flags.to)
+  // test(flags.s)
+  // test(flags.i)
+  // test(flags.mod)
   if ((++it)==end) return;
 
   // set re
@@ -125,7 +126,7 @@ bool apply(
 {
   // array of temporary strings
   std::array<std::vector<shared_str>,8> share;
-  for (auto& v : share) { v.reserve(2); v.emplace_back(); }
+  for (auto& v : share) { /*v.reserve(2);*/ v.emplace_back(); }
 
   // loop over expressions
   for (const auto& re : expressions) {
@@ -134,7 +135,7 @@ bool apply(
     int index = re.flags.from_i;
     if (index<0) index += vec.size();
     if (index<0 || (unsigned(index))>vec.size())
-      throw std::runtime_error("bad string version index");
+      throw std::runtime_error("out of range string version index");
     auto& str = vec[index];
     if (!str) str = get_hist_str(h,re.flags.from);
 
@@ -142,7 +143,7 @@ bool apply(
       // match
       boost::smatch matches;
       bool matched = boost::regex_match(*str, matches, *re.re);
-      if (re.flags.s && !matched) return false;
+      if (re.flags.s && matched) return false;
 
       // replace
       share[re.flags.to].emplace_back(std::make_shared<std::string>(
@@ -160,7 +161,7 @@ bool apply(
     if (re.flags.mod>1) {
       auto& v_to = share[re.flags.to];
       auto& str_to = *(v_to.end()-2);
-      if (!str_to) str_to = get_hist_str(h,re.flags.from);
+      if (!str_to) str_to = get_hist_str(h,re.flags.to);
 
       switch (re.flags.mod) {
         case 2: *v_to.back() = *str_to + *v_to.back(); break;
@@ -172,6 +173,21 @@ bool apply(
     // apply functions
     for (const auto& fcn : re.fmt_fcns) fcn.apply(h.h);
   } // end expression loop
+
+  // substitute strings
+  if (std::get<0>(share).size()>1)
+    h.group = *std::get<0>(share).back();
+  if (std::get<1>(share).size()>1)
+    h.h->SetTitle(std::get<1>(share).back()->c_str());
+  if (std::get<2>(share).size()>1)
+    h.h->GetXaxis()->SetTitle(std::get<2>(share).back()->c_str());
+  if (std::get<3>(share).size()>1)
+    h.h->GetYaxis()->SetTitle(std::get<3>(share).back()->c_str());
+  if (std::get<4>(share).size()>1)
+    h.legend = *std::get<4>(share).back();
+  if (std::get<5>(share).size()>1)
+    h.h->SetName(std::get<5>(share).back()->c_str());
+
   return true;
 }
 

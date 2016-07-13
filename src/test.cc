@@ -10,6 +10,9 @@
 
 #include "hist_fmt_re.hh"
 
+#include "TH1.h"
+#include "TAxis.h"
+
 #define test(var) \
 std::cout <<"\033[36m"<< #var <<"\033[0m"<< " = " << var << std::endl;
 
@@ -39,7 +42,19 @@ int main(int argc, char *argv[])
   // test(get<1>(args2.args))
   // test(get<2>(args2.args))
 
-  stringstream ss(argv[1]);
-  hist_fmt_re re;
-  ss >> re;
+  vector<hist_fmt_re> re; re.reserve(argc-1);
+  for (int i=1; i<argc; ++i) {
+    stringstream ss(argv[i]);
+    re.emplace_back();
+    ss >> re.back();
+  }
+
+  TH1 *h = new TH1D("hist_test","Histogram example",10,0,10);
+  hist_fmt_re::hist_wrap hw {h,"group","leg"};
+  apply(hw,re);
+
+  test(h->GetTitle());
+  test(h->GetXaxis()->GetTitle());
+
+  delete h;
 }
