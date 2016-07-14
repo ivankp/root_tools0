@@ -252,11 +252,17 @@ hist_fmt_fcn::hist_fmt_fcn(const std::string& str) {
     "blank string in regex function field");
 
   std::vector<substr> tokens;
-  const char* c = str.c_str();
-  const char* begin = c;
+  const char *c = str.c_str();
+  const char *begin = c;
   char d = '=';
   for (;;) {
     while (*c!=d && *c!='\0') ++c;
+    if (*c!='\0' && d==',') {
+      int esc = 0;
+      test(*(c-1))
+      for (const char *a=c-1; *a=='\\' && a!=begin; --a) ++esc;
+      if (esc%2) { ++c; continue; }
+    }
     std::pair<const char*,const char*> cc(begin,c-1);
     while (isspace(*cc.first )) ++cc.first;
     while (isspace(*cc.second)) --cc.second;
