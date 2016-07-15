@@ -31,7 +31,7 @@ public:
   struct flags_t {
     enum fromto { g=0, t=1, x=2, y=3, l=4, n=5, f=6, d=7 };
     unsigned int s    : 1; // select
-    unsigned int i    : 1; // invert selection
+    unsigned int i    : 1; // invert selection and matching
     unsigned int mod  : 2; // mod
     unsigned int      : 0;
     fromto       from : 4; // string source

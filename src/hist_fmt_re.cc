@@ -16,7 +16,7 @@
 
 #include <iostream>
 #define test(var) \
-std::cout <<"\033[36m"<< #var <<"\033[0m"<< " = " << var << std::endl;
+  std::cout <<"\033[36m"<< #var <<"\033[0m"<< " = " << var << std::endl;
 
 void hist_fmt_re::init(const std::string& str) {
   auto blocks = block_split(str,"/|:");
@@ -77,6 +77,8 @@ void hist_fmt_re::init(const std::string& str) {
   if (flags.mod && !to) throw std::runtime_error(
     "expected \'to\' after \'+\' in "+str);
   if (from && to && !flags.mod) flags.mod = 1;
+  // test(from)
+  // test(to)
   // test(flags.from)
   // test(flags.from_i)
   // test(flags.to)
@@ -87,11 +89,11 @@ void hist_fmt_re::init(const std::string& str) {
 
   // set re
   if (it->size()) re = new boost::regex(*it);
-  if (re && !flags.mod) flags.mod = 1;
   if ((++it)==end) return;
 
   // set subst
   if (it->size()) subst = std::move(*it);
+  if (re && !flags.mod && subst.size()) flags.mod = 1;
   if ((++it)==end) return;
 
   // set fmt_fcns
@@ -139,17 +141,20 @@ bool apply(
     auto& str = vec[index];
     if (!str) str = get_hist_str(h,re.flags.from);
 
+    bool matched;
     if (re.re) { // applying regex
       // match
       boost::smatch matches;
-      bool matched = boost::regex_match(*str, matches, *re.re);
-      if (re.flags.s && matched) return false;
-
+      matched = boost::regex_match(*str, matches, *re.re);
+      if (re.flags.i) matched = !matched;
       // replace
-      share[re.flags.to].emplace_back(std::make_shared<std::string>(
-        boost::regex_replace(*str, *re.re, re.subst,
-          boost::match_default | boost::format_sed)
-      ));
+      if (re.flags.mod) {
+        share[re.flags.to].emplace_back(std::make_shared<std::string>(
+          boost::regex_replace(*str, *re.re, re.subst,
+            boost::match_default | boost::format_sed)
+        ));
+      }
+      if (re.flags.s && !matched) return false;
     } else if (re.flags.mod) { // no regex, modify
       if (re.flags.mod==1) // no copy, share
         share[re.flags.to].emplace_back(str);
@@ -171,7 +176,8 @@ bool apply(
     }
 
     // apply functions
-    for (const auto& fcn : re.fmt_fcns) fcn.apply(h.h);
+    if (matched)
+      for (const auto& fcn : re.fmt_fcns) fcn.apply(h.h);
   } // end expression loop
 
   // substitute strings
@@ -259,7 +265,6 @@ hist_fmt_fcn::hist_fmt_fcn(const std::string& str) {
     while (*c!=d && *c!='\0') ++c;
     if (*c!='\0' && d==',') {
       int esc = 0;
-      test(*(c-1))
       for (const char *a=c-1; *a=='\\' && a!=begin; --a) ++esc;
       if (esc%2) { ++c; continue; }
     }

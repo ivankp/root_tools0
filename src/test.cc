@@ -10,11 +10,11 @@
 
 #include "hist_fmt_re.hh"
 
-#include "TH1.h"
-#include "TAxis.h"
+#include <TH1.h>
+#include <TAxis.h>
 
 #define test(var) \
-std::cout <<"\033[36m"<< #var <<"\033[0m"<< " = " << var << std::endl;
+  std::cout <<"\033[36m"<< #var <<"\033[0m"<< " = " << var << std::endl;
 
 using namespace std;
 
@@ -53,8 +53,13 @@ int main(int argc, char *argv[])
   hist_fmt_re::hist_wrap hw {h,"group","leg"};
   apply(hw,re);
 
+  test(hw.group)
   test(h->GetTitle());
   test(h->GetXaxis()->GetTitle());
+  test(h->GetYaxis()->GetTitle());
+  test(hw.legend)
+  test(h->GetName());
+  test(h->GetLineColor());
 
   delete h;
 }

@@ -1,32 +1,56 @@
-EXE := overlay subtuple test
-
-CXXFLAGS := -std=c++11 -Wall -O3
+CXX := g++
+STD := -std=c++11
+DF := $(STD)
+CF := $(STD) -Wall #-O3 -flto
+LF := $(STD) #-flto
 
 ROOT_CFLAGS := $(shell root-config --cflags)
 ROOT_LIBS   := $(shell root-config --libs)
 
-FLAGS_overlay := $(ROOT_CFLAGS)
-LIBS_overlay := $(ROOT_LIBS) -lboost_program_options -lboost_regex
+C_overlay := $(ROOT_CFLAGS)
+L_overlay := $(ROOT_LIBS) -lboost_program_options -lboost_regex
 
-FLAGS_subtuple := $(ROOT_CFLAGS)
-LIBS_subtuple := $(ROOT_LIBS) -lTreePlayer
+C_subtuple := $(ROOT_CFLAGS)
+L_subtuple := $(ROOT_LIBS) -lTreePlayer
 
-FLAGS_test := $(ROOT_CFLAGS)
-LIBS_test := $(ROOT_LIBS) -lboost_regex
+C_test := $(ROOT_CFLAGS)
+L_test := $(ROOT_LIBS) -lboost_regex
 
+C_hist_fmt_re := $(ROOT_CFLAGS)
+
+SRC := src
+BIN := bin
+BLD := .build
+
+SRCS := $(shell find $(SRC) -type f -name '*.cc')
+DEPS := $(patsubst $(SRC)%.cc,$(BLD)%.d,$(SRCS))
+
+GREP_EXES := grep -rl '^ *int \+main *(' $(SRC)
+EXES := $(patsubst $(SRC)%.cc,$(BIN)%,$(shell $(GREP_EXES)))
+
+NODEPS := clean
 .PHONY: all clean
 
-all: $(EXE:%=bin/%)
+all: $(EXES)
 
-bin/subtuple: src/timed_counter2.hh
-bin/overlay: src/ring.hh
-bin/test: src/*.hh src/block_split.cc src/hist_fmt_re.cc
+bin/test: $(BLD)/block_split.o $(BLD)/hist_fmt_re.o
 
-bin/%: src/%.cc | bin
-	g++ $(CXXFLAGS) $(FLAGS_$*) $(filter %.cc,$^) -o $@ $(LIBS_$*)
+#Don't create dependencies when we're cleaning, for instance
+ifeq (0, $(words $(findstring $(MAKECMDGOALS), $(NODEPS))))
+-include $(DEPS)
+endif
 
-bin:
+$(DEPS): $(BLD)/%.d: $(SRC)/%.cc | $(BLD)
+	$(CXX) $(DF) -MM -MT '$(@:.d=.o)' $< -MF $@
+
+$(BLD)/%.o: | $(BLD)
+	$(CXX) $(CF) $(C_$*) -c $(filter %.cc,$^) -o $@
+
+$(BIN)/%: $(BLD)/%.o | $(BIN)
+	$(CXX) $(LF) $(filter %.o,$^) -o $@ $(L_$*)
+
+$(BLD) $(BIN):
 	mkdir $@
 
 clean:
-	@rm -rfv bin
+	@rm -rfv $(BLD) $(BIN)
