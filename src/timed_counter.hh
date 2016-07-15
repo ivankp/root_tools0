@@ -5,39 +5,47 @@
 #include <iomanip>
 #include <chrono>
 
-template <typename I, typename Enable = void>
-class timed_counter { };
-
-template <typename I>
-class timed_counter <
-  I, typename std::enable_if<std::is_integral<I>::value>::type >
-{
+template <typename I, typename Compare = std::less<I>>
+class timed_counter {
 public:
-  using value_type    = I;
+  using value_type    = typename std::enable_if<std::is_integral<I>::value,I>::type;
+  using compare_type  = Compare;
   using clock_type    = std::chrono::system_clock;
   using time_type     = std::chrono::time_point<clock_type>;
   using duration_type = std::chrono::duration<double>;
 
 private:
   value_type cnt;
-  time_type start, last;
+  const value_type cnt_start, cnt_end;
+  const time_type start;
+  time_type last;
+  compare_type cmp;
 
   void print() {
     using std::cout;
     using std::setw;
     using std::setfill;
+    std::ios::fmtflags f(cout.flags());
+    auto prec = cout.precision();
 
     const auto dt = duration_type((last = clock_type::now()) - start).count();
     const int hours   = dt/3600;
     const int minutes = (dt-hours*3600)/60;
     const int seconds = (dt-hours*3600-minutes*60);
+    int nb = 28;
 
     cout << setw(12) << cnt << " | ";
+    cout.precision(2);
+    cout << std::fixed << setw(6) << (
+      cnt==cnt_start ? 0. : 100.*float(cnt-cnt_start)/float(cnt_end-cnt_start)
+    ) <<'%'<< " | ";
     if (hours) {
+      nb += 8;
       cout << setw(5) << hours << ':'
       << setfill('0') << setw(2) << minutes << ':'
       << setw(2) << seconds << setfill(' ');
     } else if (minutes) {
+      nb += 2;
       cout << setw(2) << minutes << ':'
       << setfill('0') << setw(2) << seconds << setfill(' ');
     } else {
@@ -45,18 +53,24 @@ private:
     }
 
     cout.flush();
-    if (hours)        for (int i=0;i<26;++i) cout << '\b';
-    else if (minutes) for (int i=0;i<20;++i) cout << '\b';
-    else              for (int i=0;i<18;++i) cout << '\b';
+    for (int i=0; i<nb; ++i) cout << '\b';
+    cout.flags(f);
+    cout.precision(prec);
   }
   void print_check() {
     if ( duration_type(clock_type::now()-last).count() > 1 ) print();
   }
 
 public:
-  timed_counter(I i=0)
-  : cnt(i), start(clock_type::now()), last(start) { print(); }
+  timed_counter(I i, I n)
+  : cnt(i), cnt_start(i), cnt_end(n), start(clock_type::now()), last(start)
+  { print(); }
+  timed_counter(I n)
+  : cnt(0), cnt_start(0), cnt_end(n), start(clock_type::now()), last(start)
+  { print(); }
   ~timed_counter() { print(); std::cout << std::endl; }
+
+  inline bool ok() const noexcept { return cmp(cnt,cnt_end); }
 
   // prefix
   inline I operator++() { print_check(); return ++cnt; }

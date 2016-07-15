@@ -34,6 +34,7 @@ NODEPS := clean
 all: $(EXES)
 
 bin/test: $(BLD)/block_split.o $(BLD)/hist_fmt_re.o
+bin/overlay2: $(BLD)/block_split.o $(BLD)/hist_fmt_re.o
 
 #Don't create dependencies when we're cleaning, for instance
 ifeq (0, $(words $(findstring $(MAKECMDGOALS), $(NODEPS))))

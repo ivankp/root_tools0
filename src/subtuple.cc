@@ -12,7 +12,7 @@
 #include <TTreeReader.h>
 #include <TTreeReaderValue.h>
 
-#include "timed_counter2.hh"
+#include "timed_counter.hh"
 
 using namespace std;
 
