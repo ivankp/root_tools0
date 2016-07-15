@@ -10,6 +10,9 @@ ROOT_LIBS   := $(shell root-config --libs)
 C_overlay := $(ROOT_CFLAGS)
 L_overlay := $(ROOT_LIBS) -lboost_program_options -lboost_regex
 
+C_overlay2 := $(ROOT_CFLAGS)
+L_overlay2 := $(ROOT_LIBS) -lboost_program_options -lboost_regex
+
 C_subtuple := $(ROOT_CFLAGS)
 L_subtuple := $(ROOT_LIBS) -lTreePlayer
 

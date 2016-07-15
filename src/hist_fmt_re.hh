@@ -56,7 +56,7 @@ public:
   hist_fmt_re& operator=(const hist_fmt_re& o);
   hist_fmt_re& operator=(hist_fmt_re&& o);
 
-  friend bool apply(hist_wrap& h, const std::vector<hist_fmt_re>& expressions);
+  friend bool apply(const std::vector<hist_fmt_re>& expressions, hist_wrap& h);
 };
 
 std::istream& operator>>(std::istream& in, hist_fmt_re& ref);

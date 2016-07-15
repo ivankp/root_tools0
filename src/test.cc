@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
 
   TH1 *h = new TH1D("hist_test","Histogram example",10,0,10);
   hist_fmt_re::hist_wrap hw {h,"group","leg"};
-  apply(hw,re);
+  apply(re,hw);
 
   test(hw.group)
   test(h->GetTitle());

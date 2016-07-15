@@ -123,8 +123,8 @@ shared_str get_hist_str(
 }
 
 bool apply(
-  hist_fmt_re::hist_wrap& h,
-  const std::vector<hist_fmt_re>& expressions)
+  const std::vector<hist_fmt_re>& expressions,
+  hist_fmt_re::hist_wrap& h)
 {
   // array of temporary strings
   std::array<std::vector<shared_str>,8> share;
