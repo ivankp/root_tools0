@@ -147,6 +147,7 @@ bool apply(
       boost::smatch matches;
       matched = boost::regex_match(*str, matches, *re.re);
       if (re.flags.i) matched = !matched;
+      if (re.flags.s && !matched) return false;
       // replace
       if (re.flags.mod) {
         share[re.flags.to].emplace_back(std::make_shared<std::string>(
@@ -154,7 +155,6 @@ bool apply(
             boost::match_default | boost::format_sed)
         ));
       }
-      if (re.flags.s && !matched) return false;
     } else if (re.flags.mod) { // no regex, modify
       if (re.flags.mod==1) // no copy, share
         share[re.flags.to].emplace_back(str);
@@ -232,19 +232,19 @@ std::istream& operator>>(std::istream& in, hist_fmt_re& ref) {
 // ******************************************************************
 
 struct hist_fmt_fcn_SetLineColor
-: public hist_fmt_fcn_impl, public interpreted_args<Color_t> {
+: public hist_fmt_fcn_impl, private interpreted_args<Color_t> {
   using interpreted_args::interpreted_args;
   virtual void apply(TH1* h) const { h->SetLineColor(std::get<0>(args)); }
 };
 
 struct hist_fmt_fcn_SetLineStyle
-: public hist_fmt_fcn_impl, public interpreted_args<Style_t> {
+: public hist_fmt_fcn_impl, private interpreted_args<Style_t> {
   using interpreted_args::interpreted_args;
   virtual void apply(TH1* h) const { h->SetLineStyle(std::get<0>(args)); }
 };
 
 struct hist_fmt_fcn_SetLineWidth
-: public hist_fmt_fcn_impl, public interpreted_args<Width_t> {
+: public hist_fmt_fcn_impl, private interpreted_args<Width_t> {
   using interpreted_args::interpreted_args;
   virtual void apply(TH1* h) const { h->SetLineWidth(std::get<0>(args)); }
 };
@@ -255,7 +255,7 @@ struct hist_fmt_fcn_SetLineWidth
 // spaces don't matter
 hist_fmt_fcn::hist_fmt_fcn(const std::string& str) {
   if (str.size()==0) throw std::runtime_error(
-    "blank string in regex function field");
+    "blank string in hist_fmt_fcn function field");
 
   std::vector<substr> tokens;
   const char *c = str.c_str();
