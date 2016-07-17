@@ -104,6 +104,7 @@ namespace std {
   }
 }
 
+bool multiple_files;
 void get_hists(TDirectory* dir,
   const vector<hist_fmt_re>& re, group_map& gmap
 ) noexcept {
@@ -114,8 +115,25 @@ void get_hists(TDirectory* dir,
     if (obj->InheritsFrom(TH1::Class())) {
 
       TH1* h = static_cast<TH1*>(obj);
-      // TODO: default group and legend strings
-      hist_fmt_re::hist_wrap hw(h,"","");
+
+      string group, legend = h->GetName();
+      if (multiple_files) {
+        auto* dir = h->GetDirectory();
+        while (!dir->InheritsFrom(TFile::Class())) dir = dir->GetMotherDir();
+        group = dir->GetName();
+      } else {
+        for ( auto* dir = h->GetDirectory(); !dir->InheritsFrom(TFile::Class());
+              dir = dir->GetMotherDir() ) {
+          (group += dir->GetName()) += '/';
+        }
+        if (!group.size()) {
+          const auto sep = legend.find('_');
+          group  = legend.substr(0,sep);
+          legend = legend.substr(sep+1);
+        }
+      }
+      hist_fmt_re::hist_wrap hw(h,move(group),move(legend));
+
       if ( apply(re,hw) ) gmap.emplace(std::move(hw));
 
     } else if (obj->InheritsFrom(TDirectory::Class())) {
@@ -211,6 +229,19 @@ int main(int argc, char **argv)
     cerr <<"\033[31mError in overlay options: "<<e.what()<<"\033[0m"<< endl;
     return 1;
   }
+  if (ifname.size()==1) {
+    if (ofname.size()==0) {
+      auto slash = ifname.front().find('/');
+      auto   dot = ifname.front().rfind('.');
+      ofname = slash==string::npos
+        ? ifname.front().substr(0,dot)
+        : ifname.front().substr(slash+1,dot-slash-1);
+      ofname += ".pdf";
+    }
+  } else {
+    multiple_files = true;
+  }
+  cout << "Output file: " << ofname << endl;
   // end options ---------------------------------------------------
 
   // Parse regex ******************************************
