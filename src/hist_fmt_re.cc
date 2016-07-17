@@ -108,11 +108,11 @@ shared_str get_hist_str(
   std::string str;
   using flags_t = hist_fmt_re::flags_t;
   switch (flag) {
-    case flags_t::g: return std::move(h.group); break;
+    case flags_t::g: return h.group; break;
     case flags_t::t: str = h.h->GetTitle(); break;
     case flags_t::x: str = h.h->GetXaxis()->GetTitle(); break;
     case flags_t::y: str = h.h->GetYaxis()->GetTitle(); break;
-    case flags_t::l: return std::move(h.legend); break;
+    case flags_t::l: return h.legend; break;
     case flags_t::n: str = h.h->GetName(); break;
     case flags_t::f: str = h.h->GetDirectory()->GetName(); break;
     case flags_t::d: str = h.h->GetDirectory()->GetName(); break;
@@ -198,18 +198,14 @@ bool apply(
 
 hist_fmt_re::~hist_fmt_re() { if (re) delete re; }
 hist_fmt_re::hist_fmt_re(const hist_fmt_re& o) noexcept
-: flags(o.flags), re(o.re), subst(o.subst), fmt_fcns(o.fmt_fcns) {
-  std::cout << "copy constructor" << std::endl;
-}
+: flags(o.flags), re(o.re), subst(o.subst), fmt_fcns(o.fmt_fcns) { }
 hist_fmt_re::hist_fmt_re(hist_fmt_re&& o) noexcept
 : flags(o.flags), re(o.re),
   subst(std::move(o.subst)), fmt_fcns(std::move(o.fmt_fcns))
 {
-  std::cout << "move constructor" << std::endl;
   o.re = nullptr;
 }
 hist_fmt_re& hist_fmt_re::operator=(const hist_fmt_re& o) noexcept {
-  std::cout << "copy =" << std::endl;
   flags = o.flags;
   re = o.re;
   subst = o.subst;
@@ -217,19 +213,11 @@ hist_fmt_re& hist_fmt_re::operator=(const hist_fmt_re& o) noexcept {
   return *this;
 }
 hist_fmt_re& hist_fmt_re::operator=(hist_fmt_re&& o) noexcept {
-  std::cout << "move =" << std::endl;
   flags = o.flags;
   re = o.re; o.re = nullptr;
   subst = o.subst;
   fmt_fcns = std::move(o.fmt_fcns);
   return *this;
-}
-
-std::istream& operator>>(std::istream& in, hist_fmt_re& ref) {
-  std::string buff;
-  std::getline(in,buff,(char)EOF);
-  ref.init(buff);
-  return in;
 }
 
 // ******************************************************************

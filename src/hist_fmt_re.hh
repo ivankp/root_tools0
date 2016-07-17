@@ -73,6 +73,4 @@ public:
   friend bool apply(const std::vector<hist_fmt_re>& expressions, hist_wrap& h);
 };
 
-std::istream& operator>>(std::istream& in, hist_fmt_re& ref);
-
 #endif

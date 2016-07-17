@@ -55,7 +55,6 @@ public:
   static bool unsorted;
 
   void emplace(hist_fmt_re::hist_wrap&& h) {
-    test(h.h->GetName())
     auto g = s.emplace(std::move(h.group),v.size());
     if (g.second) {
       v.emplace_back();
@@ -115,7 +114,6 @@ void get_hists(TDirectory* dir,
     if (obj->InheritsFrom(TH1::Class())) {
 
       TH1* h = static_cast<TH1*>(obj);
-      test(h->GetName())
       // TODO: default group and legend strings
       hist_fmt_re::hist_wrap hw(h,"","");
       if ( apply(re,hw) ) gmap.emplace(std::move(hw));
@@ -130,8 +128,7 @@ void get_hists(TDirectory* dir,
 int main(int argc, char **argv)
 {
   string ofname, cfname;
-  vector<string> ifname;
-  vector<hist_fmt_re> hist_re;
+  vector<string> ifname, re_str;
   ring<Color_t> color;
   ring<Style_t> style;
   ring<Width_t> width;
@@ -158,7 +155,7 @@ int main(int argc, char **argv)
       ("conf,c", po::value(&cfname),
        "configuration file name")
 
-      ("regex,r", po::value(&hist_re)->multitoken(),
+      ("regex,r", po::value(&re_str)->multitoken(),
        "regex for organizing histograms")
       ("sort-groups", po::bool_switch(&sort_groups),
        "draw groups in alphabetic order\ninstead of sequential")
@@ -211,10 +208,22 @@ int main(int argc, char **argv)
     }
     po::notify(vm);
   } catch (exception& e) {
-    cerr << "Error in overlay options: " <<  e.what() << endl;
+    cerr <<"\033[31mError in overlay options: "<<e.what()<<"\033[0m"<< endl;
     return 1;
   }
   // end options ---------------------------------------------------
+
+  // Parse regex ******************************************
+  vector<hist_fmt_re> re;
+  re.reserve(re_str.size());
+  for (const auto& str : re_str) {
+    try {
+      re.emplace_back(str);
+    } catch (exception& e) {
+      cerr <<"\033[31mError in parsing regex: "<<e.what()<<"\033[0m"<< endl;
+      return 1;
+    }
+  }
 
   // Accumulate *******************************************
   group_map gmap;
@@ -226,8 +235,7 @@ int main(int argc, char **argv)
     if (f->IsZombie()) return 1;
     cout << "Input file: " << f->GetName() << endl;
 
-    get_hists(f, hist_re, gmap);
-    // test(*(gmap.begin()->back().group))
+    get_hists(f, re, gmap);
   }
   cout << endl;
 
@@ -334,10 +342,8 @@ int main(int argc, char **argv)
     if (legend && hh.size()>1) {
       leg = new TLegend(0.72,0.9-hh.size()*0.04,0.9,0.9);
       leg->SetFillColorAlpha(0,0.65);
-      for (const auto& h : hh) {
-        // TODO: print real legend string
-        leg->AddEntry(h.h, h.h->GetName());
-      }
+      for (const auto& h : hh)
+        leg->AddEntry(h.h, h.legend->c_str());
       leg->Draw();
     }
 

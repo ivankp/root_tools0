@@ -44,20 +44,18 @@ int main(int argc, char *argv[])
 
   vector<hist_fmt_re> re; re.reserve(argc-1);
   for (int i=1; i<argc; ++i) {
-    stringstream ss(argv[i]);
-    re.emplace_back();
-    ss >> re.back();
+    re.emplace_back(argv[i]);
   }
 
   TH1 *h = new TH1D("hist_test","Histogram example",10,0,10);
   hist_fmt_re::hist_wrap hw {h,"group","leg"};
   apply(re,hw);
 
-  test(hw.group)
+  test(*hw.group)
   test(h->GetTitle());
   test(h->GetXaxis()->GetTitle());
   test(h->GetYaxis()->GetTitle());
-  test(hw.legend)
+  test(*hw.legend)
   test(h->GetName());
   test(h->GetLineColor());
 
