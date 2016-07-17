@@ -148,7 +148,7 @@ bool apply(
       if (re.flags.i) matched = !matched;
       if (re.flags.s && !matched) return false;
       // replace
-      if (re.flags.mod) {
+      if (re.flags.mod && (re.flags.to==re.flags.from || matched)) {
         share[re.flags.to].emplace_back(std::make_shared<std::string>(
           boost::regex_replace(*str, *re.re, re.subst,
             boost::match_default | boost::format_sed)
