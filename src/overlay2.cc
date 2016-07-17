@@ -5,7 +5,7 @@
 #include <iterator>
 #include <vector>
 #include <string>
-#include <map>
+#include <set>
 #include <memory>
 #include <algorithm>
 #include <stdexcept>
@@ -28,6 +28,7 @@
 
 #include "ring.hh"
 #include "hist_fmt_re.hh"
+#include "deref_less.hh"
 
 #define test(var) \
   std::cout <<"\033[36m"<< #var <<"\033[0m"<< " = " << var << std::endl;
@@ -35,8 +36,61 @@
 using namespace std;
 namespace po = boost::program_options;
 
-// using shared_str = std::shared_ptr<std::string>;
-using hist_group_map = std::map<std::string,std::vector<TH1*>>;
+using shared_str = std::shared_ptr<std::string>;
+class group_map {
+  struct key {
+    shared_str g;
+    unsigned i;
+    key(shared_str&& g, unsigned i): g(move(g)), i(i) { }
+    inline const std::string& operator*() const noexcept(noexcept(*g)) {
+      return *g;
+    }
+  };
+  using set_t = std::set<key,deref_less<key>>;
+  set_t s;
+  using vec_t = std::vector<std::vector<hist_fmt_re::hist_wrap>>;
+  vec_t v;
+
+public:
+  static bool unsorted;
+
+  void emplace(hist_fmt_re::hist_wrap&& h) {
+    test(h.h->GetName())
+    auto g = s.emplace(std::move(h.group),v.size());
+    if (g.second) {
+      v.emplace_back();
+      v.back().emplace_back(h.h,g.first->g,std::move(h.legend));
+    } else v[g.first->i].emplace_back(h.h,g.first->g,std::move(h.legend));
+  }
+
+  struct iter_wrap {
+    typename vec_t::iterator it_v;
+    typename set_t::iterator it_s;
+
+    inline typename vec_t::reference operator*() noexcept {
+      return  *(unsorted ? it_v : it_v+it_s->i);
+    }
+    inline typename vec_t::pointer operator->() noexcept {
+      return &*(unsorted ? it_v : it_v+it_s->i);
+    }
+    inline iter_wrap& operator++() noexcept {
+      if (unsorted) ++it_v;
+      else ++it_s;
+      return *this;
+    }
+    inline bool operator!=(const iter_wrap& o) const noexcept {
+      return unsorted ? it_v != o.it_v : it_s != o.it_s;
+    }
+  };
+
+  inline iter_wrap begin() noexcept {
+    return {v.begin(),s.begin()};
+  }
+  inline iter_wrap end() noexcept {
+    return {v.end(),s.end()};
+  }
+};
+bool group_map::unsorted = true;
 
 namespace std {
   template <typename T1, typename T2>
@@ -51,21 +105,8 @@ namespace std {
   }
 }
 
-struct file {
-  TFile *f;
-  ~file() { delete f; }
-  friend std::istream& operator>>(std::istream& in, file& f) {
-    string buff;
-    getline(in,buff,(char)EOF);
-    f.f = new TFile(buff.c_str(),"read");
-    if (f.f->IsZombie()) throw runtime_error("unable to open file "+buff);
-    cout << "Input file: " << f.f->GetName() << endl;
-    return in;
-  }
-};
-
 void get_hists(TDirectory* dir,
-  const vector<hist_fmt_re>& re, hist_group_map& hmap
+  const vector<hist_fmt_re>& re, group_map& gmap
 ) noexcept {
   TIter nextkey(dir->GetListOfKeys());
   TKey *key;
@@ -74,13 +115,13 @@ void get_hists(TDirectory* dir,
     if (obj->InheritsFrom(TH1::Class())) {
 
       TH1* h = static_cast<TH1*>(obj);
+      test(h->GetName())
       // TODO: default group and legend strings
-      hist_fmt_re::hist_wrap hist {h,"",""};
-      if ( apply(re,hist) )
-        hmap[hist.group].emplace_back(h);
+      hist_fmt_re::hist_wrap hw(h,"","");
+      if ( apply(re,hw) ) gmap.emplace(std::move(hw));
 
     } else if (obj->InheritsFrom(TDirectory::Class())) {
-      get_hists( static_cast<TDirectory*>(obj), re, hmap );
+      get_hists( static_cast<TDirectory*>(obj), re, gmap );
     }
     // TODO: allow TGraphs to be overlayed as well
   }
@@ -89,7 +130,7 @@ void get_hists(TDirectory* dir,
 int main(int argc, char **argv)
 {
   string ofname, cfname;
-  vector<file> ifiles;
+  vector<string> ifname;
   vector<hist_fmt_re> hist_re;
   ring<Color_t> color;
   ring<Style_t> style;
@@ -100,6 +141,7 @@ int main(int argc, char **argv)
        logx, morelogx, noexpx,
        logy, morelogy, noexpy;
   vector<double> hliney, vlinex;
+  bool sort_groups;
 
   // TODO: allow options to be applied only to some groups
   // TODO: text boxes
@@ -109,7 +151,7 @@ int main(int argc, char **argv)
   try {
     po::options_description desc("Options");
     desc.add_options()
-      ("input,i", po::value(&ifiles)->multitoken()->required(),
+      ("input,i", po::value(&ifname)->multitoken()->required(),
        "*input root file names")
       ("output,o", po::value(&ofname),
        "output pdf file name")
@@ -118,9 +160,11 @@ int main(int argc, char **argv)
 
       ("regex,r", po::value(&hist_re)->multitoken(),
        "regex for organizing histograms")
+      ("sort-groups", po::bool_switch(&sort_groups),
+       "draw groups in alphabetic order\ninstead of sequential")
 
       ("legend,l", po::bool_switch(&legend), "draw legend")
-      ("stats", po::value(&stats)->default_value(0),
+      ("stats,s", po::value(&stats)->default_value(0),
        "draw stats box: e.g. 111110")
 
       ("colors", po::value(color.v_ptr())->multitoken()->
@@ -173,8 +217,19 @@ int main(int argc, char **argv)
   // end options ---------------------------------------------------
 
   // Accumulate *******************************************
-  hist_group_map hmap;
-  for (const file& f : ifiles) get_hists(f.f, hist_re, hmap);
+  group_map gmap;
+  vector<unique_ptr<TFile>> ff;
+  ff.reserve(ifname.size());
+  for (const auto& name : ifname) {
+    static TFile *f;
+    ff.emplace_back(f = new TFile(name.c_str(),"read"));
+    if (f->IsZombie()) return 1;
+    cout << "Input file: " << f->GetName() << endl;
+
+    get_hists(f, hist_re, gmap);
+    // test(*(gmap.begin()->back().group))
+  }
+  cout << endl;
 
   // Draw *************************************************
   vector<TLine> hline(hliney.size()), vline(vlinex.size());
@@ -186,11 +241,9 @@ int main(int argc, char **argv)
   canv.SetLogy(logy);
   canv.SaveAs((ofname+'[').c_str());
 
-  // TODO: allow alphabetic & sequential ordering
-  for (auto& hp : hmap) {
-    cout << "group: " << hp.first << endl;
-
-    TH1 *h = hp.second.front();
+  if (sort_groups) group_map::unsorted = false;
+  for (auto&& hh : gmap) {
+    TH1 *h = hh.front().h;
     h->SetStats(false);
     // TODO: let regex function specified attribute override default here
     h->SetLineWidth(width[0]);
@@ -216,9 +269,9 @@ int main(int argc, char **argv)
       double ymin = numeric_limits<double>::max(),
              ymax = (logy ? 0 : numeric_limits<double>::min());
 
-      for (auto* h : hp.second) {
-        for (auto n=h->GetNbinsX(), i=1; i<=n; ++i) {
-          double y = h->GetBinContent(i);
+      for (const auto& h : hh) {
+        for (auto n=h.h->GetNbinsX(), i=1; i<=n; ++i) {
+          double y = h.h->GetBinContent(i);
           if (logy && y<=0.) continue;
           if (y<ymin) ymin = y;
           if (y>ymax) ymax = y;
@@ -256,15 +309,15 @@ int main(int argc, char **argv)
       ya->SetRangeUser(ymin,ymax);
     }
 
-    h->SetStats(stats && hp.second.size()==1);
+    h->SetStats(stats && hh.size()==1);
     h->Draw();
-    if (stats && hp.second.size()==1) {
+    if (stats && hh.size()==1) {
       auto* stat_box = static_cast<TPaveStats*>(h->FindObject("stats"));
       if (stat_box) stat_box->SetFillColorAlpha(0,0.65);
     }
 
-    for (unsigned i=1, n=hp.second.size(); i<n; ++i) {
-      h = hp.second[i];
+    for (unsigned i=1, n=hh.size(); i<n; ++i) {
+      h = hh[i].h;
       h->SetLineWidth(width[i]);
       h->SetLineStyle(style[i]);
       h->SetLineColor(color[i]);
@@ -278,12 +331,12 @@ int main(int argc, char **argv)
     	vline[i].DrawLine(vlinex[i], ya->GetXmax(), vlinex[i], ya->GetXmin());
 
     TLegend *leg = nullptr;
-    if (legend && hp.second.size()>1) {
-      leg = new TLegend(0.72,0.9-hp.second.size()*0.04,0.9,0.9);
+    if (legend && hh.size()>1) {
+      leg = new TLegend(0.72,0.9-hh.size()*0.04,0.9,0.9);
       leg->SetFillColorAlpha(0,0.65);
-      for (TH1 *h : hp.second) {
+      for (const auto& h : hh) {
         // TODO: print real legend string
-        leg->AddEntry(h, h->GetName());
+        leg->AddEntry(h.h, h.h->GetName());
       }
       leg->Draw();
     }

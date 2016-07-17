@@ -4,6 +4,7 @@
 #include <iosfwd>
 #include <string>
 #include <vector>
+#include <memory>
 
 #include <boost/regex_fwd.hpp>
 
@@ -25,8 +26,21 @@ public:
 class hist_fmt_re {
 public:
   struct hist_wrap {
+    typedef std::shared_ptr<std::string> shared_str;
     TH1 *h;
-    std::string group, legend;
+    shared_str group, legend;
+    hist_wrap(TH1* h, const shared_str& group, const shared_str& legend);
+    hist_wrap(TH1* h, shared_str&& group, shared_str&& legend);
+    hist_wrap(TH1* h, const shared_str& group, shared_str&& legend);
+    hist_wrap(TH1* h, shared_str&& group, const shared_str& legend);
+    hist_wrap(TH1* h, const std::string& group, const std::string& legend);
+    hist_wrap(TH1* h, std::string&& group, std::string&& legend);
+    hist_wrap(TH1* h, const std::string& group, std::string&& legend);
+    hist_wrap(TH1* h, std::string&& group, const std::string& legend);
+    hist_wrap(hist_wrap&& o) noexcept
+    : h(o.h), group(std::move(o.group)), legend(std::move(o.legend)) {
+      o.h = nullptr;
+    }
   };
   struct flags_t {
     enum fromto { g=0, t=1, x=2, y=3, l=4, n=5, f=6, d=7 };
@@ -51,10 +65,10 @@ public:
   : flags(), re(nullptr), subst(), fmt_fcns() { init(str); }
   ~hist_fmt_re();
 
-  hist_fmt_re(const hist_fmt_re& o);
-  hist_fmt_re(hist_fmt_re&& o);
-  hist_fmt_re& operator=(const hist_fmt_re& o);
-  hist_fmt_re& operator=(hist_fmt_re&& o);
+  hist_fmt_re(const hist_fmt_re& o) noexcept;
+  hist_fmt_re(hist_fmt_re&& o) noexcept;
+  hist_fmt_re& operator=(const hist_fmt_re& o) noexcept;
+  hist_fmt_re& operator=(hist_fmt_re&& o) noexcept;
 
   friend bool apply(const std::vector<hist_fmt_re>& expressions, hist_wrap& h);
 };

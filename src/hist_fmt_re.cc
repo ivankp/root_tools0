@@ -3,7 +3,6 @@
 #include <cctype>
 #include <tuple>
 #include <array>
-#include <memory>
 #include <stdexcept>
 #include <boost/regex.hpp>
 #include <TH1.h>
@@ -109,11 +108,11 @@ shared_str get_hist_str(
   std::string str;
   using flags_t = hist_fmt_re::flags_t;
   switch (flag) {
-    case flags_t::g: str = h.group; break;
+    case flags_t::g: return std::move(h.group); break;
     case flags_t::t: str = h.h->GetTitle(); break;
     case flags_t::x: str = h.h->GetXaxis()->GetTitle(); break;
     case flags_t::y: str = h.h->GetYaxis()->GetTitle(); break;
-    case flags_t::l: str = h.legend; break;
+    case flags_t::l: return std::move(h.legend); break;
     case flags_t::n: str = h.h->GetName(); break;
     case flags_t::f: str = h.h->GetDirectory()->GetName(); break;
     case flags_t::d: str = h.h->GetDirectory()->GetName(); break;
@@ -182,7 +181,7 @@ bool apply(
 
   // substitute strings
   if (std::get<0>(share).size()>1)
-    h.group = *std::get<0>(share).back();
+    h.group = std::get<0>(share).back();
   if (std::get<1>(share).size()>1)
     h.h->SetTitle(std::get<1>(share).back()->c_str());
   if (std::get<2>(share).size()>1)
@@ -190,7 +189,7 @@ bool apply(
   if (std::get<3>(share).size()>1)
     h.h->GetYaxis()->SetTitle(std::get<3>(share).back()->c_str());
   if (std::get<4>(share).size()>1)
-    h.legend = *std::get<4>(share).back();
+    h.legend = std::get<4>(share).back();
   if (std::get<5>(share).size()>1)
     h.h->SetName(std::get<5>(share).back()->c_str());
 
@@ -198,26 +197,30 @@ bool apply(
 }
 
 hist_fmt_re::~hist_fmt_re() { if (re) delete re; }
-hist_fmt_re::hist_fmt_re(const hist_fmt_re& o)
-: flags(o.flags), re(o.re), subst(o.subst), fmt_fcns(o.fmt_fcns) { }
-hist_fmt_re::hist_fmt_re(hist_fmt_re&& o)
+hist_fmt_re::hist_fmt_re(const hist_fmt_re& o) noexcept
+: flags(o.flags), re(o.re), subst(o.subst), fmt_fcns(o.fmt_fcns) {
+  std::cout << "copy constructor" << std::endl;
+}
+hist_fmt_re::hist_fmt_re(hist_fmt_re&& o) noexcept
 : flags(o.flags), re(o.re),
   subst(std::move(o.subst)), fmt_fcns(std::move(o.fmt_fcns))
 {
+  std::cout << "move constructor" << std::endl;
   o.re = nullptr;
-  o.subst = nullptr;
 }
-hist_fmt_re& hist_fmt_re::operator=(const hist_fmt_re& o) {
+hist_fmt_re& hist_fmt_re::operator=(const hist_fmt_re& o) noexcept {
+  std::cout << "copy =" << std::endl;
   flags = o.flags;
   re = o.re;
   subst = o.subst;
   fmt_fcns = o.fmt_fcns;
   return *this;
 }
-hist_fmt_re& hist_fmt_re::operator=(hist_fmt_re&& o) {
+hist_fmt_re& hist_fmt_re::operator=(hist_fmt_re&& o) noexcept {
+  std::cout << "move =" << std::endl;
   flags = o.flags;
   re = o.re; o.re = nullptr;
-  subst = o.subst; o.subst = nullptr;
+  subst = o.subst;
   fmt_fcns = std::move(o.fmt_fcns);
   return *this;
 }
@@ -290,3 +293,42 @@ hist_fmt_fcn::hist_fmt_fcn(const std::string& str) {
     throw std::runtime_error("in "+str+": "+e.what());
   }
 }
+
+
+hist_fmt_re::hist_wrap::hist_wrap(TH1* h,
+  const std::string& group, const std::string& legend)
+: h(h), group(std::make_shared<std::string>(group)),
+  legend(std::make_shared<std::string>(legend))
+{ }
+hist_fmt_re::hist_wrap::hist_wrap(TH1* h,
+  std::string&& group, std::string&& legend)
+: h(h), group(std::make_shared<std::string>(std::move(group))),
+  legend(std::make_shared<std::string>(std::move(legend)))
+{ }
+hist_fmt_re::hist_wrap::hist_wrap(TH1* h,
+  const std::string& group, std::string&& legend)
+: h(h), group(std::make_shared<std::string>(group)),
+  legend(std::make_shared<std::string>(std::move(legend)))
+{ }
+hist_fmt_re::hist_wrap::hist_wrap(TH1* h,
+  std::string&& group, const std::string& legend)
+: h(h), group(std::make_shared<std::string>(std::move(group))),
+  legend(std::make_shared<std::string>(legend))
+{ }
+
+hist_fmt_re::hist_wrap::hist_wrap(TH1* h,
+  const shared_str& group, const shared_str& legend)
+: h(h), group(group), legend(legend)
+{ }
+hist_fmt_re::hist_wrap::hist_wrap(TH1* h,
+  shared_str&& group, shared_str&& legend)
+: h(h), group(std::move(group)), legend(std::move(legend))
+{ }
+hist_fmt_re::hist_wrap::hist_wrap(TH1* h,
+  const shared_str& group, shared_str&& legend)
+: h(h), group(group), legend(std::move(legend))
+{ }
+hist_fmt_re::hist_wrap::hist_wrap(TH1* h,
+  shared_str&& group, const shared_str& legend)
+: h(h), group(std::move(group)), legend(legend)
+{ }
