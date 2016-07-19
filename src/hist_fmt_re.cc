@@ -30,6 +30,7 @@ void hist_fmt_re::init(const std::string& str) {
     switch (*c) {
       case 's': flags.s = 1; prev_fromto = false; continue;
       case 'i': flags.i = 1; prev_fromto = false; continue;
+      case 'm': flags.m = 1; prev_fromto = false; continue;
       case 'g': flags.to = flags_t::g; fromto = true; break; // group
       case 't': flags.to = flags_t::t; fromto = true; break; // title
       case 'x': flags.to = flags_t::x; fromto = true; break; // x title
@@ -148,7 +149,7 @@ bool apply(
       if (re.flags.i) matched = !matched;
       if (re.flags.s && !matched) return false;
       // replace
-      if (re.flags.mod && (re.flags.to==re.flags.from || matched)) {
+      if (re.flags.mod && (!re.flags.m || matched)) {
         share[re.flags.to].emplace_back(std::make_shared<std::string>(
           boost::regex_replace(*str, *re.re, re.subst,
             boost::match_default | boost::format_sed)

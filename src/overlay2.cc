@@ -29,6 +29,7 @@
 #include "ring.hh"
 #include "hist_fmt_re.hh"
 #include "deref_less.hh"
+#include "array_istream_op.hh"
 
 #define test(var) \
   std::cout <<"\033[36m"<< #var <<"\033[0m"<< " = " << var << std::endl;
@@ -91,19 +92,6 @@ public:
 };
 bool group_map::unsorted = true;
 
-namespace std {
-  template <typename T1, typename T2>
-  istream& operator>>(istream& in, pair<T1,T2>& p) {
-    stringstream s1, s2;
-    in.get(*s1.rdbuf(),':');
-    s1 >> p.first;
-    in.ignore(); // skip delim char
-    in.get(*s2.rdbuf(),(char)EOF);
-    s2 >> p.second;
-    return in;
-  }
-}
-
 bool multiple_files;
 void get_hists(TDirectory* dir,
   const vector<hist_fmt_re>& re, group_map& gmap
@@ -150,11 +138,15 @@ int main(int argc, char **argv)
   ring<Color_t> color;
   ring<Style_t> style;
   ring<Width_t> width;
-  pair<double,double> yrange(0.,0.);
+  std::array<double,2> yrange {0.,0.};
+  std::array<float,4> margins {0.1,0.1,0.1,0.1};
   int stats;
   bool legend,
-       logx, morelogx, noexpx,
-       logy, morelogy, noexpy;
+       logx, morelogx, noexpx, gridx,
+       logy, morelogy, noexpy, gridy,
+       ticks_left, ticks_top;
+  Float_t label_size_x, title_size_x, title_offset_x,
+          label_size_y, title_size_y, title_offset_y;
   vector<double> hliney, vlinex;
   bool sort_groups;
 
@@ -192,8 +184,8 @@ int main(int argc, char **argv)
         default_value({2}, "{2}"),
        "histograms line widths")
 
-      ("yrange,y", po::value(&yrange),
-       "vertical axis range")
+      ("yrange,y", po::value(&yrange), "vertical axis range")
+      ("margins,m", po::value(&margins), "canvas margins")
 
       ("logx", po::bool_switch(&logx), "logarithmic horizontal axis")
       ("logy", po::bool_switch(&logy), "logarithmic vertical axis")
@@ -201,6 +193,17 @@ int main(int argc, char **argv)
       ("mlogy", po::bool_switch(&morelogy), "more Y logarithmic labels")
       ("noexpx", po::bool_switch(&noexpx), "")
       ("noexpy", po::bool_switch(&noexpy), "")
+      ("gridx", po::bool_switch(&gridx), "")
+      ("gridy", po::bool_switch(&gridy), "")
+      ("ticks-left", po::bool_switch(&ticks_left), "")
+      ("ticks-top", po::bool_switch(&ticks_top), "")
+
+      ("xlabel-size", po::value(&label_size_x)->default_value(1), "")
+      ("ylabel-size", po::value(&label_size_y)->default_value(1), "")
+      ("xtitle-size", po::value(&title_size_x)->default_value(1), "")
+      ("ytitle-size", po::value(&title_size_y)->default_value(1), "")
+      ("xtitle-offset", po::value(&title_offset_x)->default_value(1), "")
+      ("ytitle-offset", po::value(&title_offset_y)->default_value(1), "")
 
       ("hline", po::value(&hliney), "horizontal lines coordinates")
       ("vline", po::value(&vlinex), "vertical lines coordinates")
@@ -276,8 +279,14 @@ int main(int argc, char **argv)
   if (stats) gStyle->SetOptStat(stats);
 
   TCanvas canv;
-  canv.SetLogx(logx);
-  canv.SetLogy(logy);
+  if (logx) canv.SetLogx();
+  if (logy) canv.SetLogy();
+  canv.SetMargin(get<0>(margins),get<1>(margins),
+                 get<2>(margins),get<3>(margins));
+  if (ticks_left) gPad->SetTicky();
+  if (ticks_top ) gPad->SetTickx();
+  if (gridx) gPad->SetGridx();
+  if (gridy) gPad->SetGridy();
   canv.SaveAs((ofname+'[').c_str());
 
   if (sort_groups) group_map::unsorted = false;
@@ -291,17 +300,20 @@ int main(int argc, char **argv)
     h->SetMarkerColor(color[0]);
 
     TAxis *xa = h->GetXaxis();
-    xa->SetTitleSize(0.045);
+    xa->SetLabelSize(label_size_x * xa->GetLabelSize());
+    xa->SetTitleSize(title_size_x * xa->GetTitleSize());
+    xa->SetTitleOffset(title_offset_x * xa->GetTitleOffset());
     xa->SetMoreLogLabels(morelogx);
     xa->SetNoExponent(noexpx);
 
     TAxis *ya = h->GetYaxis();
-    ya->SetTitleSize(0.045);
-    ya->SetTitleOffset(1.0);
+    ya->SetLabelSize(label_size_y * ya->GetLabelSize());
+    ya->SetTitleSize(title_size_y * ya->GetTitleSize());
+    ya->SetTitleOffset(title_offset_y * ya->GetTitleOffset());
     ya->SetMoreLogLabels(morelogy);
     ya->SetNoExponent(noexpy);
-    if (yrange.first!=yrange.second) {
-      ya->SetRangeUser(yrange.first,yrange.second);
+    if (get<0>(yrange)!=get<1>(yrange)) {
+      ya->SetRangeUser(get<0>(yrange),get<1>(yrange));
     } else {
 
       // determine vertical canvas range

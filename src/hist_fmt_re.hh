@@ -46,12 +46,13 @@ public:
     enum fromto { g=0, t=1, x=2, y=3, l=4, n=5, f=6, d=7 };
     unsigned int s    : 1; // select
     unsigned int i    : 1; // invert selection and matching
+    unsigned int m    : 1; // require full match to apply regex_replace
     unsigned int mod  : 2; // mod
     unsigned int      : 0;
     fromto       from : 4; // string source
     fromto       to   : 4; // string being set
     signed int from_i : 8; // python index sign convention
-    flags_t(): s(0), i(0), mod(0), from(g), to(g), from_i(-1) { }
+    flags_t(): s(0), i(0), m(0), mod(0), from(g), to(g), from_i(-1) { }
   };
 private:
   flags_t flags;

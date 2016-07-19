@@ -16,8 +16,9 @@ L_overlay2 := $(ROOT_LIBS) -lboost_program_options -lboost_regex
 C_subtuple := $(ROOT_CFLAGS)
 L_subtuple := $(ROOT_LIBS) -lTreePlayer
 
-C_test := $(ROOT_CFLAGS)
-L_test := $(ROOT_LIBS) -lboost_regex
+# C_test := $(ROOT_CFLAGS)
+# L_test := $(ROOT_LIBS) -lboost_regex
+L_test := -lboost_program_options
 
 C_hist_fmt_re := $(ROOT_CFLAGS)
 
@@ -36,7 +37,7 @@ NODEPS := clean
 
 all: $(EXES)
 
-bin/test: $(BLD)/block_split.o $(BLD)/hist_fmt_re.o
+# bin/test: $(BLD)/block_split.o $(BLD)/hist_fmt_re.o
 bin/overlay2: $(BLD)/block_split.o $(BLD)/hist_fmt_re.o
 
 #Don't create dependencies when we're cleaning, for instance
