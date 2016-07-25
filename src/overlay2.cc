@@ -135,9 +135,10 @@ int main(int argc, char **argv)
 {
   string ofname, cfname;
   vector<string> ifname, re_str;
-  ring<Color_t> color;
+  ring<Color_t> color, marker_color;
   ring<Style_t> style;
   ring<Width_t> width;
+  ring<Size_t> marker_size;
   std::array<double,2> yrange {0.,0.};
   std::array<float,4> margins {0.1,0.1,0.1,0.1};
   int stats;
@@ -147,6 +148,7 @@ int main(int argc, char **argv)
        ticks_left, ticks_top;
   Float_t label_size_x, title_size_x, title_offset_x,
           label_size_y, title_size_y, title_offset_y;
+  string val_fmt;
   vector<double> hliney, vlinex;
   bool sort_groups;
 
@@ -173,6 +175,8 @@ int main(int argc, char **argv)
       ("legend,l", po::bool_switch(&legend), "draw legend")
       ("stats,s", po::value(&stats)->default_value(0),
        "draw stats box: e.g. 111110")
+      ("val-fmt", po::value(&val_fmt),
+       "gStyle->SetPaintTextFormat()\n+ TH1::Draw(\"TEXT\")")
 
       ("colors", po::value(color.v_ptr())->multitoken()->
         default_value({602,46,8}, "{602,46,8}"),
@@ -183,6 +187,10 @@ int main(int argc, char **argv)
       ("widths", po::value(width.v_ptr())->multitoken()->
         default_value({2}, "{2}"),
        "histograms line widths")
+      ("marker-size", po::value(marker_size.v_ptr())->multitoken(),
+       "histograms marker size")
+      ("marker-color", po::value(marker_color.v_ptr())->multitoken(),
+       "histograms marker color")
 
       ("yrange,y", po::value(&yrange), "vertical axis range")
       ("margins,m", po::value(&margins), "canvas margins")
@@ -278,6 +286,8 @@ int main(int argc, char **argv)
 
   if (stats) gStyle->SetOptStat(stats);
 
+  if (val_fmt.size()) gStyle->SetPaintTextFormat(val_fmt.c_str());
+
   TCanvas canv;
   if (logx) canv.SetLogx();
   if (logy) canv.SetLogy();
@@ -298,6 +308,8 @@ int main(int argc, char **argv)
     h->SetLineStyle(style[0]);
     h->SetLineColor(color[0]);
     h->SetMarkerColor(color[0]);
+    if (marker_size.size()) h->SetMarkerSize(marker_size[0]);
+    if (marker_color.size()) h->SetMarkerColor(marker_color[0]);
 
     TAxis *xa = h->GetXaxis();
     xa->SetLabelSize(label_size_x * xa->GetLabelSize());
@@ -361,19 +373,24 @@ int main(int argc, char **argv)
     }
 
     h->SetStats(stats && hh.size()==1);
-    h->Draw();
+    string draw_opt;
+    if (val_fmt.size()) draw_opt += "HIST TEXT0";
+    h->Draw(draw_opt.c_str());
     if (stats && hh.size()==1) {
       auto* stat_box = static_cast<TPaveStats*>(h->FindObject("stats"));
       if (stat_box) stat_box->SetFillColorAlpha(0,0.65);
     }
 
+    draw_opt += " SAME";
     for (unsigned i=1, n=hh.size(); i<n; ++i) {
       h = hh[i].h;
       h->SetLineWidth(width[i]);
       h->SetLineStyle(style[i]);
       h->SetLineColor(color[i]);
       h->SetMarkerColor(color[i]);
-      h->Draw("same");
+      if (marker_size.size()) h->SetMarkerSize(marker_size[i]);
+      if (marker_color.size()) h->SetMarkerColor(marker_color[i]);
+      h->Draw(draw_opt.c_str());
     }
 
     for (unsigned i=0; i<hliney.size(); ++i)
