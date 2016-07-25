@@ -1,0 +1,5 @@
+ntuple = tree Collection
+
+xxx      = float  branch1
+double y = Float  branch2
+a        = char [] branch3

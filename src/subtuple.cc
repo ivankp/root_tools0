@@ -161,10 +161,8 @@ int main(int argc, char* argv[])
       pipes.emplace_back(reader,argv[i],argv[i+1],tout,argv[i+2]);
   }
 
-  // const auto nent = tin->GetEntries();
-  // for (timed_counter<Long64_t> ent; ent<nent; ++ent) {
-  for (timed_counter<Long64_t> ent(reader.GetEntries(true)); reader.Next(); ++ent)
-  {
+  using tc = timed_counter<Long64_t>;
+  for (tc ent(reader.GetEntries(true)); reader.Next(); ++ent) {
     for (auto& p : pipes) p.Get();
     tout->Fill();
   }
