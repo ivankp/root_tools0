@@ -1,5 +1,8 @@
-ntuple = tree Collection
+data = tree CollectionTree
 
-xxx      = float  branch1
-double y = Float  branch2
-a        = char [] branch3
+yy_m  = float HGamEventInfoAuxDyn.m_yy
+y_pt  = float[] HGamPhotonsAuxDyn.pt
+y_eta = float[] HGamPhotonsAuxDyn.eta
+y_phi = float[] HGamPhotonsAuxDyn.phi
+
+char HGamEventInfoAuxDyn.isPassed == 1

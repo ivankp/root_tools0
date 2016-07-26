@@ -48,10 +48,8 @@ void flatntuple_config::parse(const std::string& cfname) {
              " *([^ \\[\\]=]*) *(\\[.*\\]| ) *([^ \\[\\]=]+) *");
 
     boost::smatch sm;
-    test(line)
     if (boost::regex_match(line,sm,branch_ex)) {
       if (sm.str(4)!="tree") {
-        cout << "branch" << endl;
         branch::type_char tin  = branch::get_type(sm.str(4));
         branch::type_char tout = sm[2].length()==0 ? tin
                                : branch::get_type(sm.str(2));
@@ -61,7 +59,6 @@ void flatntuple_config::parse(const std::string& cfname) {
           branch {tout,arr,sm.str(3)}
         });
       } else {
-        cout << "tree" << endl;
         if (itree.size()) throw runtime_error("tree redefined here: \'"+line+'\'');
         otree = sm.str(3);
         itree = sm.str(6);
@@ -71,8 +68,9 @@ void flatntuple_config::parse(const std::string& cfname) {
       cout << "cut\n";
       for (const auto& m : sm) test(m)
     } else throw runtime_error("ambiguous config statement: \'"+line+'\'');
-    cout << endl;
   }
+
+  if (!itree.size()) throw runtime_error("no tree specified");
 }
 
 branch::type_char branch::get_type(std::string str) {
@@ -92,4 +90,18 @@ branch::type_char branch::get_type(std::string str) {
   else if (str=="short"  ) return S;
   else if (str=="ushort" ) return s;
   else throw runtime_error("Unexpected branch type: \'"+str+'\'');
+}
+
+#include <boost/preprocessor/seq/elem.hpp>
+#include <boost/preprocessor/seq/for_each.hpp>
+#include <boost/preprocessor/stringize.hpp>
+
+std::string branch::type_str(branch::type_char t) noexcept {
+  #define CASE(r, data, elem) case branch:: BOOST_PP_SEQ_ELEM(0,elem): \
+    return BOOST_PP_STRINGIZE(BOOST_PP_SEQ_ELEM(1,elem)); break;
+  switch (t) {
+    BOOST_PP_SEQ_FOR_EACH(CASE, _, ROOT_TYPE_SEQ)
+  }
+  #undef CASE
+  return nullptr; // actually never happens
 }
