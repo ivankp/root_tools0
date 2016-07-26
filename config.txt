@@ -5,4 +5,6 @@ y_pt  = float[] HGamPhotonsAuxDyn.pt
 y_eta = float[] HGamPhotonsAuxDyn.eta
 y_phi = float[] HGamPhotonsAuxDyn.phi
 
-char HGamEventInfoAuxDyn.isPassed == 1
+char HGamEventInfoAuxDyn.isPassed != 0
+float HGamEventInfoAuxDyn.m_yy > 105000
+float HGamEventInfoAuxDyn.m_yy < 160000

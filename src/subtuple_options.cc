@@ -1,4 +1,4 @@
-#include "flatntuple_options.hh"
+#include "subtuple_options.hh"
 
 #include <iostream>
 #include <cstring>
@@ -8,7 +8,7 @@ using namespace std;
 
 enum current_opt { opt_input, opt_output, opt_config };
 
-bool flatntuple_options::parse(int argc, const char** argv) {
+bool subtuple_options::parse(int argc, const char** argv) {
   if (argc==1 || (argc==2 && !strcmp(argv[1],"-h"))) {
     cout << argv[0] << " options:\n"
          << "  -i : input file(s)\n"

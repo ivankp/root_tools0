@@ -1,5 +1,5 @@
-#ifndef flatntuple_config_hh
-#define flatntuple_config_hh
+#ifndef subtuple_config_hh
+#define subtuple_config_hh
 
 #include <vector>
 #include <array>
@@ -25,9 +25,14 @@ struct branch {
   static std::string type_str(type_char t) noexcept;
 };
 
-struct flatntuple_config {
-  std::vector<std::array<branch,2>> branches;
+struct cut {
+  std::string op, val;
+};
+
+struct subtuple_config {
   std::string itree, otree;
+  std::vector<std::array<branch,2>> branches;
+  std::vector<std::pair<branch,cut>> cuts;
 
   void parse(const std::string& cfname);
 };

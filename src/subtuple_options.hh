@@ -1,10 +1,10 @@
-#ifndef flatntuple_options_hh
-#define flatntuple_options_hh
+#ifndef subtuple_options_hh
+#define subtuple_options_hh
 
 #include <vector>
 #include <string>
 
-struct flatntuple_options {
+struct subtuple_options {
   std::vector<std::string> input;
   std::string output, config;
   bool parse(int argc, const char** argv);

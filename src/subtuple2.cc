@@ -9,6 +9,8 @@
 #include <unordered_map>
 #include <stdexcept>
 
+#include <boost/lexical_cast.hpp>
+
 #include <TFile.h>
 #include <TTree.h>
 #include <TChain.h>
@@ -17,8 +19,8 @@
 #include <TTreeReaderArray.h>
 
 #include "timed_counter.hh"
-#include "flatntuple_options.hh"
-#include "flatntuple_config.hh"
+#include "subtuple_options.hh"
+#include "subtuple_config.hh"
 
 #include <boost/preprocessor/seq/elem.hpp>
 #include <boost/preprocessor/seq/for_each.hpp>
@@ -129,10 +131,54 @@ make_branch_pipe(value_ptr::pointer val, TTree* tree,
   return nullptr; // actually never happens
 }
 
+struct branch_cut_base {
+  virtual bool cut() =0;
+};
+
+template <typename T, typename Func>
+struct branch_cut: public branch_cut_base {
+  TTreeReaderValue<T> *in;
+  Func condition;
+  branch_cut(value_ptr::pointer val, Func condition)
+  : in( &static_cast<value_wrap<T>*>(val)->value ), condition(condition) { }
+  virtual bool cut() { return condition(**in); }
+};
+
+branch_cut_base*
+make_branch_cut(value_ptr::pointer val, const branch& ibr, const cut& c) {
+
+  #define CASE(r, data, elem) case branch:: BOOST_PP_SEQ_ELEM(0,elem): { \
+      using val_t = BOOST_PP_SEQ_ELEM(1,elem); \
+      const val_t cutx = boost::lexical_cast<val_t>(c.val); \
+      auto cutf = [cutx](val_t x){ return (x data cutx); }; \
+      return new branch_cut<val_t,decltype(cutf)>(val,cutf); \
+    } break;
+
+  if (c.op=="==") {
+    switch (ibr.type) {
+      BOOST_PP_SEQ_FOR_EACH(CASE, ==, ROOT_TYPE_SEQ)
+    }
+  } else if (c.op=="!=") {
+    switch (ibr.type) {
+      BOOST_PP_SEQ_FOR_EACH(CASE, !=, ROOT_TYPE_SEQ)
+    }
+  } else if (c.op==">") {
+    switch (ibr.type) {
+      BOOST_PP_SEQ_FOR_EACH(CASE, >, ROOT_TYPE_SEQ)
+    }
+  } else if (c.op=="<") {
+    switch (ibr.type) {
+      BOOST_PP_SEQ_FOR_EACH(CASE, <, ROOT_TYPE_SEQ)
+    }
+  } else throw runtime_error("unrecognized cut operator: "+c.op);
+  #undef CASE
+  return nullptr; // actually never happens
+}
+
 int main(int argc, const char* argv[])
 {
-  flatntuple_options opt;
-  flatntuple_config config;
+  subtuple_options opt;
+  subtuple_config config;
   try {
     if (opt.parse(argc, argv)) return 1;
     config.parse(opt.config);
@@ -142,11 +188,6 @@ int main(int argc, const char* argv[])
   }
 
   cout << "Tree: " << config.itree << " -> " << config.otree << endl;
-  for (const auto& b : config.branches) {
-    cout << branch::type_str(b[0].type) << " " << b[0].name
-         << " -> "
-         << branch::type_str(b[1].type) << " " << b[1].name << endl;
-  }
 
   TChain ch(config.itree.c_str());
   for (const auto& f : opt.input) ch.Add(f.c_str());
@@ -159,8 +200,13 @@ int main(int argc, const char* argv[])
   TTreeReader reader(&ch);
   unordered_map<string,value_ptr> values;
   vector<unique_ptr<branch_pipe_base>> pipes;
+  vector<unique_ptr<branch_cut_base>> cuts;
 
   for (const auto& br : config.branches) {
+    cout << branch::type_str(get<0>(br).type) << " " << get<0>(br).name
+         << " -> "
+         << branch::type_str(get<1>(br).type) << " " << get<1>(br).name << endl;
+
     auto empl = values.emplace(std::piecewise_construct,
       forward_as_tuple(get<0>(br).name),
       forward_as_tuple(make_value(reader,get<0>(br)))
@@ -169,8 +215,23 @@ int main(int argc, const char* argv[])
       empl.first->second.get(), tout, get<0>(br), get<1>(br) ) );
   }
 
+  for (const auto& bc : config.cuts) {
+    cout << branch::type_str(get<0>(bc).type) << " " << get<0>(bc).name
+         << " " << get<1>(bc).op << " " << get<1>(bc).val << endl;
+
+    auto empl = values.emplace(std::piecewise_construct,
+      forward_as_tuple(get<0>(bc).name),
+      forward_as_tuple(make_value(reader,get<0>(bc)))
+    );
+    cuts.emplace_back( make_branch_cut(
+      empl.first->second.get(), get<0>(bc), get<1>(bc) ) );
+  }
+
   using tc = timed_counter<Long64_t>;
   for (tc ent(reader.GetEntries(true)); reader.Next(); ++ent) {
+    bool skip = false;
+    for (const auto& c : cuts) if (!c->cut()) { skip = true; break; }
+    if (skip) continue;
     for (const auto& p : pipes) p->copy();
     tout->Fill();
   }

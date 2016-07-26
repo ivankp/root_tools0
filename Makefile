@@ -13,11 +13,11 @@ L_overlay := $(ROOT_LIBS) -lboost_program_options -lboost_regex
 C_overlay2 := $(ROOT_CFLAGS)
 L_overlay2 := $(ROOT_LIBS) -lboost_program_options -lboost_regex
 
-C_flatntuple := $(ROOT_CFLAGS)
-L_flatntuple := $(ROOT_LIBS) -lTreePlayer -lboost_regex
-
 C_subtuple := $(ROOT_CFLAGS)
 L_subtuple := $(ROOT_LIBS) -lTreePlayer
+
+C_subtuple2 := $(ROOT_CFLAGS)
+L_subtuple2 := $(ROOT_LIBS) -lTreePlayer -lboost_regex
 
 # C_test := $(ROOT_CFLAGS)
 # L_test := $(ROOT_LIBS) -lboost_regex
@@ -42,7 +42,7 @@ all: $(EXES)
 
 # bin/test: $(BLD)/block_split.o $(BLD)/hist_fmt_re.o
 bin/overlay2: $(BLD)/block_split.o $(BLD)/hist_fmt_re.o
-bin/flatntuple: $(BLD)/flatntuple_options.o $(BLD)/flatntuple_config.o
+bin/subtuple2: $(BLD)/subtuple_options.o $(BLD)/subtuple_config.o
 
 #Don't create dependencies when we're cleaning, for instance
 ifeq (0, $(words $(findstring $(MAKECMDGOALS), $(NODEPS))))

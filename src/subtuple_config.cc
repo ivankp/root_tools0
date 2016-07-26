@@ -1,4 +1,4 @@
-#include "flatntuple_config.hh"
+#include "subtuple_config.hh"
 
 #include <iostream>
 #include <fstream>
@@ -22,7 +22,7 @@ inline T&& pop_back(T&& x) noexcept(noexcept(x.pop_back())) {
   return std::forward<T>(x);
 }
 
-void flatntuple_config::parse(const std::string& cfname) {
+void subtuple_config::parse(const std::string& cfname) {
   std::ifstream f(cfname);
   string line;
 
@@ -65,8 +65,10 @@ void flatntuple_config::parse(const std::string& cfname) {
         if (!otree.size()) otree = itree;
       }
     } else if (boost::regex_match(line,sm,cut_ex)) {
-      cout << "cut\n";
-      for (const auto& m : sm) test(m)
+      cuts.emplace_back(
+        branch {branch::get_type(sm.str(2)), false, sm.str(4)},
+        cut {sm.str(5),sm.str(8)}
+      );
     } else throw runtime_error("ambiguous config statement: \'"+line+'\'');
   }
 
