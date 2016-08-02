@@ -106,14 +106,9 @@ void get_hists(TDirectory* dir,
 
       string group, legend = h->GetName();
       if (multiple_files) {
-        auto* dir = h->GetDirectory();
-        while (!dir->InheritsFrom(TFile::Class())) dir = dir->GetMotherDir();
-        group = dir->GetName();
+        group = get_hist_file_str(h);
       } else {
-        for ( auto* dir = h->GetDirectory(); !dir->InheritsFrom(TFile::Class());
-              dir = dir->GetMotherDir() ) {
-          (group += dir->GetName()) += '/';
-        }
+        group = get_hist_dirs_str(h);
         if (!group.size()) {
           const auto sep = legend.find('_');
           group  = legend.substr(0,sep);

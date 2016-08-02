@@ -7,6 +7,7 @@
 #include <boost/regex.hpp>
 #include <TH1.h>
 #include <TAxis.h>
+#include <TFile.h>
 #include <TDirectory.h>
 
 #include "block_split.hh"
@@ -115,8 +116,8 @@ shared_str get_hist_str(
     case flags_t::y: str = h.h->GetYaxis()->GetTitle(); break;
     case flags_t::l: return h.legend; break;
     case flags_t::n: str = h.h->GetName(); break;
-    case flags_t::f: str = h.h->GetDirectory()->GetName(); break;
-    case flags_t::d: str = h.h->GetDirectory()->GetName(); break;
+    case flags_t::f: str = std::move(get_hist_file_str(h.h)); break;
+    case flags_t::d: str = std::move(get_hist_dirs_str(h.h)); break;
     // TODO: get file name
   }
   return std::move(std::make_shared<std::string>(std::move(str)));
@@ -283,6 +284,20 @@ hist_fmt_fcn::hist_fmt_fcn(const std::string& str) {
   }
 }
 
+std::string get_hist_file_str(TH1* h) {
+  auto* dir = h->GetDirectory();
+  while (!dir->InheritsFrom(TFile::Class())) dir = dir->GetMotherDir();
+  return dir->GetName();
+}
+std::string get_hist_dirs_str(TH1* h) {
+  std::string dirs;
+  for ( auto* dir = h->GetDirectory(); !dir->InheritsFrom(TFile::Class());
+        dir = dir->GetMotherDir() ) {
+    if (dirs.size()) dirs += '/';
+    dirs += dir->GetName();
+  }
+  return std::move(dirs);
+}
 
 hist_fmt_re::hist_wrap::hist_wrap(TH1* h,
   const std::string& group, const std::string& legend)

@@ -74,4 +74,7 @@ public:
   friend bool apply(const std::vector<hist_fmt_re>& expressions, hist_wrap& h);
 };
 
+std::string get_hist_file_str(TH1* h);
+std::string get_hist_dirs_str(TH1* h);
+
 #endif
