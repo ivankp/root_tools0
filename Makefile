@@ -10,18 +10,8 @@ ROOT_LIBS   := $(shell root-config --libs)
 C_overlay := $(ROOT_CFLAGS)
 L_overlay := $(ROOT_LIBS) -lboost_program_options -lboost_regex
 
-C_overlay2 := $(ROOT_CFLAGS)
-L_overlay2 := $(ROOT_LIBS) -lboost_program_options -lboost_regex
-
 C_subtuple := $(ROOT_CFLAGS)
-L_subtuple := $(ROOT_LIBS) -lTreePlayer
-
-C_subtuple2 := $(ROOT_CFLAGS)
-L_subtuple2 := $(ROOT_LIBS) -lTreePlayer -lboost_regex
-
-# C_test := $(ROOT_CFLAGS)
-# L_test := $(ROOT_LIBS) -lboost_regex
-L_test := -lboost_program_options
+L_subtuple := $(ROOT_LIBS) -lTreePlayer -lboost_regex
 
 C_hist_fmt_re := $(ROOT_CFLAGS)
 
@@ -40,9 +30,8 @@ NODEPS := clean
 
 all: $(EXES)
 
-# bin/test: $(BLD)/block_split.o $(BLD)/hist_fmt_re.o
-bin/overlay2: $(BLD)/block_split.o $(BLD)/hist_fmt_re.o
-bin/subtuple2: $(BLD)/subtuple_options.o $(BLD)/subtuple_config.o
+bin/overlay: $(BLD)/block_split.o $(BLD)/hist_fmt_re.o
+bin/subtuple: $(BLD)/subtuple_options.o $(BLD)/subtuple_config.o
 
 #Don't create dependencies when we're cleaning, for instance
 ifeq (0, $(words $(findstring $(MAKECMDGOALS), $(NODEPS))))
