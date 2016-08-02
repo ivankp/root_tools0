@@ -4,14 +4,16 @@
 #include <tuple>
 #include <array>
 #include <stdexcept>
+
+#include <boost/utility/string_ref.hpp>
 #include <boost/regex.hpp>
+
 #include <TH1.h>
 #include <TAxis.h>
 #include <TFile.h>
 #include <TDirectory.h>
 
 #include "block_split.hh"
-#include "substr.hh"
 #include "interpreted_args.hh"
 
 #include <iostream>
@@ -244,13 +246,19 @@ struct hist_fmt_fcn_SetLineWidth
 
 // ******************************************************************
 
+bool all_lower_strcmp(const boost::string_ref& s1, const char* s2) {
+  for (unsigned i=0, n=s1.size(); i<n; ++i)
+    if (std::tolower(s1[i])!=s2[i]) return false;
+  return true;
+}
+
 // syntax: function=arg1,arg2,arg3
 // spaces don't matter
 hist_fmt_fcn::hist_fmt_fcn(const std::string& str) {
   if (str.size()==0) throw std::runtime_error(
     "blank string in hist_fmt_fcn function field");
 
-  std::vector<substr> tokens;
+  std::vector<boost::string_ref> tokens;
   const char *c = str.c_str();
   const char *begin = c;
   char d = '=';
@@ -272,13 +280,13 @@ hist_fmt_fcn::hist_fmt_fcn(const std::string& str) {
 
   // find the right function
   try {
-    if (tokens.front() == "LineColor") {
+    if (all_lower_strcmp(tokens.front(),"linecolor")) {
       impl = new hist_fmt_fcn_SetLineColor(++tokens.begin(),tokens.end());
-    } else if (tokens.front() == "LineStyle") {
+    } else if (all_lower_strcmp(tokens.front(),"linestyle")) {
       impl = new hist_fmt_fcn_SetLineStyle(++tokens.begin(),tokens.end());
-    } else if (tokens.front() == "LineWidth") {
+    } else if (all_lower_strcmp(tokens.front(),"linewidth")) {
       impl = new hist_fmt_fcn_SetLineWidth(++tokens.begin(),tokens.end());
-    } else throw std::runtime_error("unknown function "+tokens.front().str());
+    } else throw std::runtime_error("unknown function "+tokens.front().to_string());
   } catch (const std::exception& e) {
     throw std::runtime_error("in "+str+": "+e.what());
   }

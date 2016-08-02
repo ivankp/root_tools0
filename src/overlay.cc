@@ -176,12 +176,11 @@ int main(int argc, char **argv)
       ("colors", po::value(color.v_ptr())->multitoken()->
         default_value({602,46,8}, "{602,46,8}"),
        "histograms colors")
-      ("styles", po::value(style.v_ptr())->multitoken()->
-        default_value({1}, "{1}"),
-       "histograms line styles")
       ("widths", po::value(width.v_ptr())->multitoken()->
         default_value({2}, "{2}"),
        "histograms line widths")
+      ("styles", po::value(style.v_ptr())->multitoken(),
+       "histograms line styles")
       ("marker-size", po::value(marker_size.v_ptr())->multitoken(),
        "histograms marker size")
       ("marker-color", po::value(marker_color.v_ptr())->multitoken(),
@@ -299,12 +298,12 @@ int main(int argc, char **argv)
     TH1 *h = hh.front().h;
     h->SetStats(false);
     // TODO: let regex function specified attribute override default here
-    h->SetLineWidth(width[0]);
-    h->SetLineStyle(style[0]);
     h->SetLineColor(color[0]);
-    h->SetMarkerColor(color[0]);
-    if (marker_size.size()) h->SetMarkerSize(marker_size[0]);
+    h->SetLineWidth(width[0]);
+    if (style.size()) h->SetLineStyle(style[0]);
     if (marker_color.size()) h->SetMarkerColor(marker_color[0]);
+    else h->SetMarkerColor(color[0]);
+    if (marker_size.size()) h->SetMarkerSize(marker_size[0]);
 
     TAxis *xa = h->GetXaxis();
     xa->SetLabelSize(label_size_x * xa->GetLabelSize());
@@ -379,12 +378,12 @@ int main(int argc, char **argv)
     draw_opt += " SAME";
     for (unsigned i=1, n=hh.size(); i<n; ++i) {
       h = hh[i].h;
-      h->SetLineWidth(width[i]);
-      h->SetLineStyle(style[i]);
       h->SetLineColor(color[i]);
-      h->SetMarkerColor(color[i]);
-      if (marker_size.size()) h->SetMarkerSize(marker_size[i]);
+      h->SetLineWidth(width[i]);
+      if (style.size()) h->SetLineStyle(style[i]);
       if (marker_color.size()) h->SetMarkerColor(marker_color[i]);
+      else h->SetMarkerColor(color[i]);
+      if (marker_size.size()) h->SetMarkerSize(marker_size[i]);
       h->Draw(draw_opt.c_str());
     }
 
