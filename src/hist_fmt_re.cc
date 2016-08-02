@@ -244,6 +244,20 @@ struct hist_fmt_fcn_SetLineWidth
   virtual void apply(TH1* h) const { h->SetLineWidth(std::get<0>(args)); }
 };
 
+struct hist_fmt_fcn_Scale
+: public hist_fmt_fcn_impl, private interpreted_args<Double_t,std::string> {
+  using interpreted_args::interpreted_args;
+  virtual void apply(TH1* h) const { h->Scale(
+    std::get<0>(args), std::get<1>(args).c_str() ); }
+};
+
+struct hist_fmt_fcn_Normalize
+: public hist_fmt_fcn_impl, private interpreted_args<double> {
+  using interpreted_args::interpreted_args;
+  virtual void apply(TH1* h) const {
+    h->Scale(std::get<0>(args)/h->Integral("width")); }
+};
+
 // ******************************************************************
 
 bool all_lower_strcmp(const boost::string_ref& s1, const char* s2) {
@@ -286,6 +300,10 @@ hist_fmt_fcn::hist_fmt_fcn(const std::string& str) {
       impl = new hist_fmt_fcn_SetLineStyle(++tokens.begin(),tokens.end());
     } else if (all_lower_strcmp(tokens.front(),"linewidth")) {
       impl = new hist_fmt_fcn_SetLineWidth(++tokens.begin(),tokens.end());
+    } else if (all_lower_strcmp(tokens.front(),"scale")) {
+      impl = new hist_fmt_fcn_Scale(++tokens.begin(),tokens.end());
+    } else if (all_lower_strcmp(tokens.front(),"norm")) {
+      impl = new hist_fmt_fcn_Normalize(++tokens.begin(),tokens.end());
     } else throw std::runtime_error("unknown function "+tokens.front().to_string());
   } catch (const std::exception& e) {
     throw std::runtime_error("in "+str+": "+e.what());

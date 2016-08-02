@@ -110,9 +110,10 @@ void get_hists(TDirectory* dir,
       } else {
         group = get_hist_dirs_str(h);
         if (!group.size()) {
-          const auto sep = legend.find('_');
-          group  = legend.substr(0,sep);
-          legend = legend.substr(sep+1);
+          // const auto sep = legend.find('_');
+          // group  = legend.substr(0,sep);
+          // legend = legend.substr(sep+1);
+          group = legend;
         }
       }
       hist_fmt_re::hist_wrap hw(h,move(group),move(legend));
@@ -327,8 +328,10 @@ int main(int argc, char **argv)
              ymax = (logy ? 0 : numeric_limits<double>::min());
 
       for (const auto& h : hh) {
-        for (auto n=h.h->GetNbinsX(), i=1; i<=n; ++i) {
+        test(h.h->GetName())
+        for (int i=1, n=h.h->GetNbinsX(); i<=n; ++i) {
           double y = h.h->GetBinContent(i);
+          // test(y)
           if (logy && y<=0.) continue;
           if (y<ymin) ymin = y;
           if (y>ymax) ymax = y;
@@ -375,7 +378,8 @@ int main(int argc, char **argv)
       if (stat_box) stat_box->SetFillColorAlpha(0,0.65);
     }
 
-    draw_opt += " SAME";
+    if (draw_opt.size()) draw_opt += " ";
+    draw_opt += "SAME";
     for (unsigned i=1, n=hh.size(); i<n; ++i) {
       h = hh[i].h;
       h->SetLineColor(color[i]);
