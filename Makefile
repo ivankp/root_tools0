@@ -7,8 +7,8 @@ LF := $(STD) -flto
 ROOT_CFLAGS := $(shell root-config --cflags)
 ROOT_LIBS   := $(shell root-config --libs)
 
-C_overlay := $(ROOT_CFLAGS)
-L_overlay := $(ROOT_LIBS) -lboost_program_options -lboost_regex
+C_rxplot := $(ROOT_CFLAGS)
+L_rxplot := $(ROOT_LIBS) -lboost_program_options -lboost_regex
 
 C_subtuple := $(ROOT_CFLAGS)
 L_subtuple := $(ROOT_LIBS) -lTreePlayer -lboost_regex
@@ -30,7 +30,7 @@ NODEPS := clean
 
 all: $(EXES)
 
-bin/overlay: $(BLD)/block_split.o $(BLD)/hist_fmt_re.o
+bin/rxplot: $(BLD)/block_split.o $(BLD)/hist_fmt_re.o
 bin/subtuple: $(BLD)/subtuple_options.o $(BLD)/subtuple_config.o
 
 #Don't create dependencies when we're cleaning, for instance

@@ -258,6 +258,12 @@ struct hist_fmt_fcn_Normalize
     h->Scale(std::get<0>(args)/h->Integral("width")); }
 };
 
+struct hist_fmt_fcn_SetOption
+: public hist_fmt_fcn_impl, private interpreted_args<std::string> {
+  using interpreted_args::interpreted_args;
+  virtual void apply(TH1* h) const { h->SetOption(std::get<0>(args).c_str()); }
+};
+
 // ******************************************************************
 
 bool all_lower_strcmp(const boost::string_ref& s1, const char* s2) {
@@ -304,6 +310,8 @@ hist_fmt_fcn::hist_fmt_fcn(const std::string& str) {
       impl = new hist_fmt_fcn_Scale(++tokens.begin(),tokens.end());
     } else if (all_lower_strcmp(tokens.front(),"norm")) {
       impl = new hist_fmt_fcn_Normalize(++tokens.begin(),tokens.end());
+    } else if (all_lower_strcmp(tokens.front(),"draw")) {
+      impl = new hist_fmt_fcn_SetOption(++tokens.begin(),tokens.end());
     } else throw std::runtime_error("unknown function "+tokens.front().to_string());
   } catch (const std::exception& e) {
     throw std::runtime_error("in "+str+": "+e.what());

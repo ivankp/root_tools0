@@ -123,7 +123,7 @@ void get_hists(TDirectory* dir,
     } else if (obj->InheritsFrom(TDirectory::Class())) {
       get_hists( static_cast<TDirectory*>(obj), re, gmap );
     }
-    // TODO: allow TGraphs to be overlayed as well
+    // TODO: allow TGraphs to be drawn as well
   }
 }
 
@@ -135,7 +135,7 @@ int main(int argc, char **argv)
   ring<Style_t> style;
   ring<Width_t> width;
   ring<Size_t> marker_size;
-  std::array<double,2> yrange {0.,0.};
+  std::array<double,2> xrange {0.,0.}, yrange {0.,0.};
   std::array<float,4> margins {0.1,0.1,0.1,0.1};
   int stats;
   bool legend,
@@ -175,7 +175,7 @@ int main(int argc, char **argv)
        "gStyle->SetPaintTextFormat()\n+ TH1::Draw(\"TEXT\")")
 
       ("colors", po::value(color.v_ptr())->multitoken()->
-        default_value({602,46,8}, "{602,46,8}"),
+        default_value({602,46,8,90,44,52}, "{602,46,8,90,44,52}"),
        "histograms colors")
       ("widths", po::value(width.v_ptr())->multitoken()->
         default_value({2}, "{2}"),
@@ -187,6 +187,7 @@ int main(int argc, char **argv)
       ("marker-color", po::value(marker_color.v_ptr())->multitoken(),
        "histograms marker color")
 
+      ("xrange,x", po::value(&xrange), "horizontal axis range")
       ("yrange,y", po::value(&yrange), "vertical axis range")
       ("margins,m", po::value(&margins), "canvas margins")
 
@@ -232,7 +233,7 @@ int main(int argc, char **argv)
     }
     po::notify(vm);
   } catch (exception& e) {
-    cerr <<"\033[31mError in overlay options: "<<e.what()<<"\033[0m"<< endl;
+    cerr <<"\033[31mError in rxplot options: "<<e.what()<<"\033[0m"<< endl;
     return 1;
   }
   if (ifname.size()==1) {
@@ -296,6 +297,8 @@ int main(int argc, char **argv)
 
   if (sort_groups) group_map::unsorted = false;
   for (auto&& hh : gmap) {
+    cout << *hh.front().group << endl;
+
     TH1 *h = hh.front().h;
     h->SetStats(false);
     // TODO: let regex function specified attribute override default here
@@ -312,6 +315,9 @@ int main(int argc, char **argv)
     xa->SetTitleOffset(title_offset_x * xa->GetTitleOffset());
     xa->SetMoreLogLabels(morelogx);
     xa->SetNoExponent(noexpx);
+    if (get<0>(xrange)!=get<1>(xrange)) {
+      xa->SetRangeUser(get<0>(xrange),get<1>(xrange));
+    }
 
     TAxis *ya = h->GetYaxis();
     ya->SetLabelSize(label_size_y * ya->GetLabelSize());
@@ -328,10 +334,8 @@ int main(int argc, char **argv)
              ymax = (logy ? 0 : numeric_limits<double>::min());
 
       for (const auto& h : hh) {
-        test(h.h->GetName())
         for (int i=1, n=h.h->GetNbinsX(); i<=n; ++i) {
           double y = h.h->GetBinContent(i);
-          // test(y)
           if (logy && y<=0.) continue;
           if (y<ymin) ymin = y;
           if (y>ymax) ymax = y;
@@ -370,7 +374,7 @@ int main(int argc, char **argv)
     }
 
     h->SetStats(stats && hh.size()==1);
-    string draw_opt;
+    string draw_opt = h->GetOption();
     if (val_fmt.size()) draw_opt += "HIST TEXT0";
     h->Draw(draw_opt.c_str());
     if (stats && hh.size()==1) {
