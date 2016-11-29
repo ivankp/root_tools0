@@ -13,6 +13,9 @@ L_rxplot := $(ROOT_LIBS) -lboost_program_options -lboost_regex
 C_subtuple := $(ROOT_CFLAGS)
 L_subtuple := $(ROOT_LIBS) -lTreePlayer -lboost_regex
 
+C_br := $(ROOT_CFLAGS) -std=c++14
+L_br := $(ROOT_LIBS)
+
 C_hist_fmt_re := $(ROOT_CFLAGS)
 
 SRC := src
