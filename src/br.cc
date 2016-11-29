@@ -1,5 +1,4 @@
 #include <iostream>
-#include <memory>
 #include <cstring>
 
 #include <TFile.h>
@@ -11,6 +10,16 @@
 using std::cout;
 using std::endl;
 
+void prt(const char* type, const char* name, const char* title) {
+  cout << "\033[35m" << type << "\033[0m "
+       << name;
+  if (title)
+    if (std::strlen(title))
+      if (std::strcmp(name,title))
+        cout << ": \033[30m" << title << "\033[0m";
+  cout << endl;
+}
+
 int main(int argc, char** argv)
 {
   if (argc != 2) {
@@ -18,7 +27,7 @@ int main(int argc, char** argv)
     return 0;
   }
 
-  auto file = std::make_unique<TFile>(argv[1]);
+  TFile* file = new TFile(argv[1]);
   if (file->IsZombie()) return 1;
 
   TIter next(file->GetListOfKeys());
@@ -31,37 +40,34 @@ int main(int argc, char** argv)
       cout << "\033[34m"  << tree->ClassName()
            << "\033[0m " << tree->GetName() << endl;
 
-      TObjArray *lb = tree->GetListOfBranches();
-      auto * const lb_last = lb->Last();
-      for ( auto bo : *lb ) {
+      TObjArray *_b = tree->GetListOfBranches();
+      auto * const lb = _b->Last();
+      for ( auto bo : *_b ) {
         TBranch *b = static_cast<TBranch*>(bo);
 
+        const char * const bcname = b->GetClassName();
         const auto nl = b->GetNleaves();
 
-        cout << (b == lb_last ? "└" : "├");
-        if (nl!=1) {
-          cout << "── ";
-          if (std::strlen(b->GetClassName())>1)
-            cout << "\033[35m" << b->GetClassName() << "\033[0m ";
-          cout << "\033[32m" << b->GetName()
-               << "\033[0m: " << b->GetTitle();
-        }
+        cout << (b != lb ? "├" : "└") << "── ";
+        if (nl>1) prt( bcname, b->GetName(), b->GetTitle() );
 
-        TObjArray *ll = b->GetListOfLeaves();
-        auto * const ll_last = ll->Last();
-        for ( auto lo : *ll ) {
+        TObjArray *_l = b->GetListOfLeaves();
+        TLeaf * const ll = static_cast<TLeaf*>(_l->Last());
+
+        if (nl==1) {
+          const char * const ltname = ll->GetTypeName();
+          prt( (ltname ? ltname : bcname), ll->GetName(), ll->GetTitle() );
+        } else for ( auto lo : *_l ) {
           TLeaf *l = static_cast<TLeaf*>(lo);
-          if (nl!=1) cout << "    " << (l == ll_last ? "└" : "├");
-          cout << "── \033[35m" << l->GetTypeName()
-               << "\033[0m \033[32m" << l->GetName()
-               << "\033[0m: " << l->GetTitle()
-               << endl;
+          cout << "│   " << (l != ll ? "├" : "└") << "── ";
+          prt( l->GetTypeName(), l->GetName(), l->GetTitle() );
         } // end leaf loop
       } // end branch loop
 
+      cout << endl;
     } // end if tree
-    cout << endl;
   }
 
+  delete file;
   return 0;
 }
