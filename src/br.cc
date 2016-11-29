@@ -33,12 +33,14 @@ int main(int argc, char** argv)
   TIter next(file->GetListOfKeys());
   TKey *key;
   while ((key = static_cast<TKey*>(next()))) {
-    TClass *key_class = TClass::GetClass(key->GetClassName());
+    const char * const key_class_name = key->GetClassName();
+    TClass *key_class = TClass::GetClass(key_class_name);
+    cout << "\033[34m"  << key_class_name << "\033[0m ";
+    cout << key->GetName() << endl;
+
     if (key_class->InheritsFrom("TTree")) { // Found a tree
 
       TTree *tree = dynamic_cast<TTree*>(key->ReadObj());
-      cout << "\033[34m"  << tree->ClassName()
-           << "\033[0m " << tree->GetName() << endl;
 
       TObjArray *_b = tree->GetListOfBranches();
       auto * const lb = _b->Last();
