@@ -138,7 +138,7 @@ int main(int argc, char **argv)
   std::array<double,2> xrange {0.,0.}, yrange {0.,0.};
   std::array<float,4> margins {0.1,0.1,0.1,0.1};
   int stats;
-  bool legend,
+  bool skip_empty, legend,
        logx, morelogx, noexpx, gridx,
        logy, morelogy, noexpy, gridy,
        ticks_left, ticks_top;
@@ -162,6 +162,9 @@ int main(int argc, char **argv)
        "output pdf file name")
       ("conf,c", po::value(&cfname),
        "configuration file name")
+
+      ("skip-empty", po::bool_switch(&skip_empty),
+       "skip group if all hists are empty")
 
       ("regex,r", po::value(&re_str)->multitoken(),
        "regex for organizing histograms")
@@ -297,6 +300,13 @@ int main(int argc, char **argv)
 
   if (sort_groups) group_map::unsorted = false;
   for (auto&& hh : gmap) {
+    if (skip_empty) {
+      bool empty = false;
+      for (const auto& h : hh)
+        if (h.h->GetEntries()==0) empty = true;
+      if (empty) continue;
+    }
+
     cout << *hh.front().group << endl;
 
     TH1 *h = hh.front().h;
