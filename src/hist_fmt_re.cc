@@ -7,6 +7,7 @@
 
 #include <boost/utility/string_ref.hpp>
 #include <boost/regex.hpp>
+#include <boost/algorithm/string/replace.hpp>
 
 #include <TH1.h>
 #include <TAxis.h>
@@ -95,7 +96,8 @@ void hist_fmt_re::init(const std::string& str) {
   if ((++it)==end) return;
 
   // set subst
-  if (it->size()) subst = std::move(*it);
+  if (it->size()) // subst = std::move(*it);
+    subst = boost::replace_all_copy(*it,"**","#");
   if (re && !flags.mod && subst.size()) flags.mod = 1;
   if ((++it)==end) return;
 

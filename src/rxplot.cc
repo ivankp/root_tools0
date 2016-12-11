@@ -337,6 +337,8 @@ int main(int argc, char **argv)
         for (int i=1, n=h.h->GetNbinsX(); i<=n; ++i) {
           double y = h.h->GetBinContent(i);
           if (logy && y<=0.) continue;
+          double e = h.h->GetBinError(i);
+          if (y==0. && e==0.) continue; // ignore empty bins
           if (y<ymin) ymin = y;
           if (y>ymax) ymax = y;
         }
