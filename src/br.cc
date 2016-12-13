@@ -1,4 +1,6 @@
 #include <iostream>
+#include <iomanip>
+#include <sstream>
 #include <cstring>
 
 #include <TFile.h>
@@ -11,14 +13,19 @@ using std::cout;
 using std::endl;
 
 void prt(const char* type, const char* name, const char* title) {
-  cout << "\033[35m" << type << "\033[0m "
-       << name;
+  cout << "\033[35m" << type << "\033[0m " << name;
   if (title)
     if (std::strlen(title))
       if (std::strcmp(name,title))
         cout << ": \033[30m" << title << "\033[0m";
   cout << endl;
 }
+
+class comma_numpunct: public std::numpunct<char> {
+protected:
+  virtual char do_thousands_sep() const { return '\''; }
+  virtual std::string do_grouping() const { return "\03"; }
+};
 
 int main(int argc, char** argv)
 {
@@ -29,6 +36,8 @@ int main(int argc, char** argv)
 
   TFile* file = new TFile(argv[1]);
   if (file->IsZombie()) return 1;
+
+  std::locale comma_locale(std::locale(), new comma_numpunct());
 
   TIter next(file->GetListOfKeys());
   TKey *key;
@@ -41,7 +50,12 @@ int main(int argc, char** argv)
     if (key_class->InheritsFrom("TTree")) { // Found a tree
 
       TTree *tree = dynamic_cast<TTree*>(key->ReadObj());
-      cout << " [" << tree->GetEntries() << ']' << endl;
+      {
+        std::stringstream ss;
+        ss.imbue(comma_locale);
+        ss << tree->GetEntries();
+        cout << " [" << ss.rdbuf() << ']' << endl;
+      }
 
       TObjArray *_b = tree->GetListOfBranches();
       auto * const lb = _b->Last();
