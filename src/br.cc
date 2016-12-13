@@ -36,11 +36,12 @@ int main(int argc, char** argv)
     const char * const key_class_name = key->GetClassName();
     TClass *key_class = TClass::GetClass(key_class_name);
     cout << "\033[34m"  << key_class_name << "\033[0m ";
-    cout << key->GetName() << endl;
+    cout << key->GetName();
 
     if (key_class->InheritsFrom("TTree")) { // Found a tree
 
       TTree *tree = dynamic_cast<TTree*>(key->ReadObj());
+      cout << " [" << tree->GetEntries() << ']' << endl;
 
       TObjArray *_b = tree->GetListOfBranches();
       auto * const lb = _b->Last();
@@ -66,8 +67,9 @@ int main(int argc, char** argv)
         } // end leaf loop
       } // end branch loop
 
-      cout << endl;
+      // cout << endl;
     } // end if tree
+    cout << endl;
   }
 
   delete file;
