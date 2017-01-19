@@ -146,7 +146,7 @@ bool apply(
     auto& str = vec[index];
     if (!str) str = get_hist_str(h,re.flags.from);
 
-    bool matched;
+    bool matched = true;
     if (re.re) { // applying regex
       // match
       boost::smatch matches;
