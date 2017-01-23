@@ -135,13 +135,13 @@ int main(int argc, char **argv)
   ring<Style_t> style;
   ring<Width_t> width;
   ring<Size_t> marker_size;
-  std::array<double,2> xrange {0.,0.}, yrange {0.,0.};
+  std::array<double,2> xrange {0.,0.}, yrange {0.,0.}, zrange {0.,0.};
   std::array<float,4> margins {0.1,0.1,0.1,0.1};
   int stats;
   bool skip_empty, legend,
        logx, morelogx, noexpx, gridx,
        logy, morelogy, noexpy, gridy,
-       ticks_left, ticks_top;
+       logz, ticks_left, ticks_top;
   Float_t label_size_x, title_size_x, title_offset_x,
           label_size_y, title_size_y, title_offset_y;
   string val_fmt;
@@ -192,10 +192,12 @@ int main(int argc, char **argv)
 
       ("xrange,x", po::value(&xrange), "horizontal axis range")
       ("yrange,y", po::value(&yrange), "vertical axis range")
+      ("zrange,z", po::value(&zrange), "vertical axis range")
       ("margins,m", po::value(&margins), "canvas margins")
 
       ("logx", po::bool_switch(&logx), "logarithmic horizontal axis")
       ("logy", po::bool_switch(&logy), "logarithmic vertical axis")
+      ("logz", po::bool_switch(&logz), "logarithmic vertical axis")
       ("mlogx", po::bool_switch(&morelogx), "more X logarithmic labels")
       ("mlogy", po::bool_switch(&morelogy), "more Y logarithmic labels")
       ("noexpx", po::bool_switch(&noexpx), "")
@@ -290,6 +292,7 @@ int main(int argc, char **argv)
   TCanvas canv;
   if (logx) canv.SetLogx();
   if (logy) canv.SetLogy();
+  if (logz) canv.SetLogz();
   canv.SetMargin(get<0>(margins),get<1>(margins),
                  get<2>(margins),get<3>(margins));
   if (ticks_left) gPad->SetTicky();
@@ -383,6 +386,11 @@ int main(int argc, char **argv)
       }
 
       ya->SetRangeUser(ymin,ymax);
+    }
+
+    if (get<0>(zrange)!=get<1>(zrange)) {
+      TAxis *za = h->GetZaxis();
+      za->SetRangeUser(get<0>(zrange),get<1>(zrange));
     }
 
     h->SetStats(stats && hh.size()==1);
