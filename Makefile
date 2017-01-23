@@ -16,6 +16,9 @@ L_subtuple := $(ROOT_LIBS) -lTreePlayer -lboost_regex
 C_br := $(ROOT_CFLAGS)
 L_br := $(ROOT_LIBS)
 
+C_hrat := $(ROOT_CFLAGS)
+L_hrat := $(ROOT_LIBS)
+
 C_tbrowser := $(ROOT_CFLAGS)
 L_tbrowser := $(ROOT_LIBS)
 
