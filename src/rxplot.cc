@@ -141,7 +141,8 @@ int main(int argc, char **argv)
   bool skip_empty, legend,
        logx, morelogx, noexpx, gridx,
        logy, morelogy, noexpy, gridy,
-       logz, ticks_left, ticks_top;
+       logz, morelogz, noexpz,
+       ticks_left, ticks_top;
   Float_t label_size_x, title_size_x, title_offset_x,
           label_size_y, title_size_y, title_offset_y;
   string val_fmt;
@@ -200,8 +201,10 @@ int main(int argc, char **argv)
       ("logz", po::bool_switch(&logz), "logarithmic vertical axis")
       ("mlogx", po::bool_switch(&morelogx), "more X logarithmic labels")
       ("mlogy", po::bool_switch(&morelogy), "more Y logarithmic labels")
+      ("mlogz", po::bool_switch(&morelogz), "more Z logarithmic labels")
       ("noexpx", po::bool_switch(&noexpx), "")
       ("noexpy", po::bool_switch(&noexpy), "")
+      ("noexpz", po::bool_switch(&noexpz), "")
       ("gridx", po::bool_switch(&gridx), "")
       ("gridy", po::bool_switch(&gridy), "")
       ("ticks-left", po::bool_switch(&ticks_left), "")
@@ -391,6 +394,8 @@ int main(int argc, char **argv)
     if (get<0>(zrange)!=get<1>(zrange)) {
       TAxis *za = h->GetZaxis();
       za->SetRangeUser(get<0>(zrange),get<1>(zrange));
+      za->SetMoreLogLabels(morelogz);
+      za->SetNoExponent(noexpz);
     }
 
     h->SetStats(stats && hh.size()==1);
