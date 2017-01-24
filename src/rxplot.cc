@@ -68,14 +68,19 @@ public:
     typename set_t::iterator it_s;
 
     inline typename vec_t::reference operator*() noexcept {
-      return  *(unsorted ? it_v : it_v+it_s->i);
+      return *(unsorted ? it_v : it_v+it_s->i);
     }
     inline typename vec_t::pointer operator->() noexcept {
-      return &*(unsorted ? it_v : it_v+it_s->i);
+      return &*(*this);
     }
     inline iter_wrap& operator++() noexcept {
       if (unsorted) ++it_v;
       else ++it_s;
+      return *this;
+    }
+    inline iter_wrap& operator+=(size_t n) noexcept {
+      if (unsorted) std::advance(it_v,n);
+      else std::advance(it_s,n);
       return *this;
     }
     inline bool operator!=(const iter_wrap& o) const noexcept {
@@ -89,6 +94,7 @@ public:
   inline iter_wrap end() noexcept {
     return {v.end(),s.end()};
   }
+  inline size_t size() const noexcept { return v.size(); }
 };
 bool group_map::unsorted = true;
 
@@ -138,6 +144,7 @@ int main(int argc, char **argv)
   std::array<double,2> xrange {0.,0.}, yrange {0.,0.}, zrange {0.,0.};
   std::array<float,4> margins {0.1,0.1,0.1,0.1};
   int stats;
+  unsigned interlace;
   string legend;
   bool skip_empty,
        logx, morelogx, noexpx, gridx,
@@ -210,6 +217,7 @@ int main(int argc, char **argv)
       ("gridy", po::bool_switch(&gridy), "")
       ("ticks-left", po::bool_switch(&ticks_left), "")
       ("ticks-top", po::bool_switch(&ticks_top), "")
+      ("interlace", po::value(&interlace)->default_value(1), "")
 
       ("xlabel-size", po::value(&label_size_x)->default_value(1), "")
       ("ylabel-size", po::value(&label_size_y)->default_value(1), "")
@@ -306,7 +314,27 @@ int main(int argc, char **argv)
   canv.SaveAs((ofname+'[').c_str());
 
   if (sort_groups) group_map::unsorted = false;
-  for (auto&& hh : gmap) {
+
+  const size_t gmap_size = gmap.size();
+  if (!interlace || (gmap_size % interlace)) {
+    cerr << "\nWarning: Cannot interlace " << gmap_size
+         << " groups by factor of " << interlace
+         << "\n         setting interlace = 1\n" << endl;
+    interlace = 1;
+  }
+  const unsigned inter_n = gmap_size / interlace;
+
+  unsigned inter_i = 0;
+  auto git = gmap.begin(), git1 = git;
+  for (size_t gi=0; gi<gmap_size; [&](){
+      ++gi;
+      if ((++inter_i)==interlace) {
+        git = (++git1);
+        inter_i = 0;
+      } else git += inter_n;
+    }())
+  {
+    auto& hh = *git;
     if (skip_empty) {
       bool empty = false;
       for (const auto& h : hh)
