@@ -138,7 +138,8 @@ int main(int argc, char **argv)
   std::array<double,2> xrange {0.,0.}, yrange {0.,0.}, zrange {0.,0.};
   std::array<float,4> margins {0.1,0.1,0.1,0.1};
   int stats;
-  bool skip_empty, legend,
+  string legend;
+  bool skip_empty,
        logx, morelogx, noexpx, gridx,
        logy, morelogy, noexpy, gridy,
        logz, morelogz, noexpz,
@@ -172,7 +173,7 @@ int main(int argc, char **argv)
       ("sort-groups", po::bool_switch(&sort_groups),
        "draw groups in alphabetic order\ninstead of sequential")
 
-      ("legend,l", po::bool_switch(&legend), "draw legend")
+      ("legend,l", po::value(&legend), "draw legend")
       ("stats,s", po::value(&stats)->default_value(0),
        "draw stats box: e.g. 111110")
       ("val-fmt", po::value(&val_fmt),
@@ -426,8 +427,16 @@ int main(int argc, char **argv)
     	vline[i].DrawLine(vlinex[i], ya->GetXmax(), vlinex[i], ya->GetXmin());
 
     TLegend *leg = nullptr;
-    if (legend && hh.size()>1) {
-      leg = new TLegend(0.72,0.9-hh.size()*0.04,0.9,0.9);
+    if (legend.size() && hh.size()>1) {
+      if (legend=="lt" || legend=="tl")
+        leg = new TLegend(0.1,0.9-hh.size()*0.04,0.28,0.9);
+      else if (legend=="lb" || legend=="bl")
+        leg = new TLegend(0.1,0.1,0.28,0.1+hh.size()*0.04);
+      else if (legend=="rb" || legend=="br")
+        leg = new TLegend(0.72,0.1,0.9,0.1+hh.size()*0.04);
+      else // rt
+        leg = new TLegend(0.72,0.9-hh.size()*0.04,0.9,0.9);
+
       leg->SetFillColorAlpha(0,0.65);
       for (const auto& h : hh)
         leg->AddEntry(h.h, h.legend->c_str());

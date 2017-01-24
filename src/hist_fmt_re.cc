@@ -39,6 +39,7 @@ void hist_fmt_re::init(const std::string& str) {
       case 't': flags.to = flags_t::t; fromto = true; break; // title
       case 'x': flags.to = flags_t::x; fromto = true; break; // x title
       case 'y': flags.to = flags_t::y; fromto = true; break; // y title
+      case 'z': flags.to = flags_t::z; fromto = true; break; // z title
       case 'l': flags.to = flags_t::l; fromto = true; break; // legend
       case 'n': flags.to = flags_t::n; fromto = true; break; // name
       case 'f': flags.to = flags_t::f; fromto = true; break; // file
@@ -118,6 +119,7 @@ shared_str get_hist_str(
     case flags_t::t: str = h.h->GetTitle(); break;
     case flags_t::x: str = h.h->GetXaxis()->GetTitle(); break;
     case flags_t::y: str = h.h->GetYaxis()->GetTitle(); break;
+    case flags_t::z: str = h.h->GetZaxis()->GetTitle(); break;
     case flags_t::l: return h.legend; break;
     case flags_t::n: str = h.h->GetName(); break;
     case flags_t::f: str = std::move(get_hist_file_str(h.h)); break;
@@ -132,7 +134,7 @@ bool apply(
   hist_fmt_re::hist_wrap& h)
 {
   // array of temporary strings
-  std::array<std::vector<shared_str>,8> share;
+  std::array<std::vector<shared_str>,9> share;
   for (auto& v : share) { /*v.reserve(2);*/ v.emplace_back(); }
 
   // loop over expressions
@@ -195,9 +197,11 @@ bool apply(
   if (std::get<3>(share).size()>1)
     h.h->GetYaxis()->SetTitle(std::get<3>(share).back()->c_str());
   if (std::get<4>(share).size()>1)
-    h.legend = std::get<4>(share).back();
+    h.h->GetZaxis()->SetTitle(std::get<4>(share).back()->c_str());
   if (std::get<5>(share).size()>1)
-    h.h->SetName(std::get<5>(share).back()->c_str());
+    h.legend = std::get<5>(share).back();
+  if (std::get<6>(share).size()>1)
+    h.h->SetName(std::get<6>(share).back()->c_str());
 
   return true;
 }

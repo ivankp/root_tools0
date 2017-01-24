@@ -43,7 +43,7 @@ public:
     }
   };
   struct flags_t {
-    enum fromto { g=0, t=1, x=2, y=3, l=4, n=5, f=6, d=7 };
+    enum fromto { g=0, t=1, x=2, y=3, z=4, l=5, n=6, f=7, d=8 };
     unsigned int s    : 1; // select
     unsigned int i    : 1; // invert selection and matching
     unsigned int m    : 1; // require full match to apply regex_replace
