@@ -152,7 +152,8 @@ int main(int argc, char **argv)
        logz, morelogz, noexpz,
        ticks_left, ticks_top;
   Float_t label_size_x, title_size_x, title_offset_x,
-          label_size_y, title_size_y, title_offset_y;
+          label_size_y, title_size_y, title_offset_y,
+          label_size_z, title_size_z, title_offset_z;
   string val_fmt;
   vector<double> hliney, vlinex;
   bool sort_groups;
@@ -221,10 +222,13 @@ int main(int argc, char **argv)
 
       ("xlabel-size", po::value(&label_size_x)->default_value(1), "")
       ("ylabel-size", po::value(&label_size_y)->default_value(1), "")
+      ("zlabel-size", po::value(&label_size_z)->default_value(1), "")
       ("xtitle-size", po::value(&title_size_x)->default_value(1), "")
       ("ytitle-size", po::value(&title_size_y)->default_value(1), "")
+      ("ztitle-size", po::value(&title_size_z)->default_value(1), "")
       ("xtitle-offset", po::value(&title_offset_x)->default_value(1), "")
       ("ytitle-offset", po::value(&title_offset_y)->default_value(1), "")
+      ("ztitle-offset", po::value(&title_offset_z)->default_value(1), "")
 
       ("hline", po::value(&hliney), "horizontal lines coordinates")
       ("vline", po::value(&vlinex), "vertical lines coordinates")
@@ -420,11 +424,15 @@ int main(int argc, char **argv)
       ya->SetRangeUser(ymin,ymax);
     }
 
-    if (get<0>(zrange)!=get<1>(zrange)) {
+    if (h->GetZaxis()) {
       TAxis *za = h->GetZaxis();
-      za->SetRangeUser(get<0>(zrange),get<1>(zrange));
+      if (get<0>(zrange)!=get<1>(zrange))
+        za->SetRangeUser(get<0>(zrange),get<1>(zrange));
       za->SetMoreLogLabels(morelogz);
       za->SetNoExponent(noexpz);
+      za->SetLabelSize(label_size_z * za->GetLabelSize());
+      za->SetTitleSize(title_size_z * za->GetTitleSize());
+      za->SetTitleOffset(title_offset_z * za->GetTitleOffset());
     }
 
     h->SetStats(stats && hh.size()==1);
