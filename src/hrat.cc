@@ -1,4 +1,5 @@
 #include <iostream>
+#include <memory>
 #include <cmath>
 
 #include <TFile.h>
@@ -63,16 +64,19 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  auto fin1 = std::make_unique<TFile>(argv[1],"read");
+  TFile *fin1 = new TFile(argv[1],"read");
   if (fin1->IsZombie()) return 1;
-  auto fin2 = std::make_unique<TFile>(argv[2],"read");
+  TFile *fin2 = new TFile(argv[2],"read");
   if (fin2->IsZombie()) return 1;
-  auto fout = std::make_unique<TFile>(argv[3],"recreate");
+  TFile *fout = new TFile(argv[3],"read");
   if (fout->IsZombie()) return 1;
 
-  dir_loop(fin1.get(),fin2.get());
+  dir_loop(fin1,fin2);
 
   fout->Write();
+  delete fout;
+  delete fin2;
+  delete fin1;
 
   return 0;
 }
