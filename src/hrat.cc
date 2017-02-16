@@ -12,14 +12,6 @@ using std::cout;
 using std::cerr;
 using std::endl;
 
-#define test(var) \
-    std::cout <<"\033[36m"<< #var <<"\033[0m"<< " = " << var << std::endl;
-
-template <typename T> [[ gnu::const ]]
-inline T sq(T x) noexcept { return x*x; }
-template <typename T, typename... TT> [[ gnu::const ]]
-inline T sq(T x, TT... xx) noexcept { return sq(x)+sq(xx...); }
-
 template <class T>
 inline T* get(TDirectory* dir, const char* name) {
   T *obj = nullptr;
