@@ -1,5 +1,4 @@
 #include <iostream>
-#include <memory>
 #include <cmath>
 
 #include <TFile.h>
@@ -68,7 +67,7 @@ int main(int argc, char** argv) {
   if (fin1->IsZombie()) return 1;
   TFile *fin2 = new TFile(argv[2],"read");
   if (fin2->IsZombie()) return 1;
-  TFile *fout = new TFile(argv[3],"read");
+  TFile *fout = new TFile(argv[3],"recreate");
   if (fout->IsZombie()) return 1;
 
   dir_loop(fin1,fin2);
