@@ -134,8 +134,7 @@ void build_envelope(TDirectory* dir, TDirectory* lower, TDirectory* upper) {
   }
 }
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
   if (argc<4) {
     cout << "usage: " << argv[0] <<
             " out.root central.root [other.root ...]" << endl;
