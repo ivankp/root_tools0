@@ -24,6 +24,9 @@ L_tbrowser := $(ROOT_LIBS)
 
 C_hist_fmt_re := $(ROOT_CFLAGS)
 
+C_envelope := $(ROOT_CFLAGS) -Isrc
+L_envelope := $(ROOT_LIBS)
+
 SRC := src
 BIN := bin
 BLD := .build
