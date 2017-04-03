@@ -7,6 +7,14 @@ LF := $(STD) -flto
 ROOT_CFLAGS := $(shell root-config --cflags)
 ROOT_LIBS   := $(shell root-config --libs)
 
+# RPATH
+rpath_script := ldd `root-config --libdir`/libTreePlayer.so \
+  | sed -n 's/.*=> \(.*\)\/.\+\.so[^ ]* (.*/\1/p' \
+  | sort | uniq \
+  | sed '/^\/lib/d;/^\/usr\/lib/d' \
+  | sed 's/^/-Wl,-rpath=/'
+ROOT_LIBS += $(shell $(rpath_script))
+
 C_rxplot := $(ROOT_CFLAGS)
 L_rxplot := $(ROOT_LIBS) -lboost_program_options -lboost_regex
 
