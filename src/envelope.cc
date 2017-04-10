@@ -34,13 +34,9 @@ inline T* read_key(TKey* key) { return static_cast<T*>(key->ReadObj()); }
 
 template <typename T>
 inline T* get(TDirectory* dir, const char* name) {
-  return dynamic_cast<T*>(dir->Get(name));
-}
-
-template <typename T>
-void cd_write(TDirectory* dir, T* obj) {
-  dir->cd();
-  obj->Clone();
+  auto *obj = dir->Get(name);
+  if (!obj) throw ivanp::exception("cannot get object ",name);
+  return dynamic_cast<T*>(obj);
 }
 
 TDirectory* enter(TDirectory* dir, const char* name) {
@@ -56,6 +52,12 @@ TClass* get_class(const char* name) {
   return class_ptr;
 }
 
+template <typename T>
+void cd_write(TDirectory* dir, T* obj) {
+  dir->cd();
+  obj->Clone();
+}
+
 template <typename... D>
 void copy_dirs(TDirectory* dir, D*... dest) {
   TIter nextkey(dir->GetListOfKeys());
@@ -63,7 +65,7 @@ void copy_dirs(TDirectory* dir, D*... dest) {
   while ((key = static_cast<TKey*>(nextkey()))) {
     const auto class_name = key->GetClassName();
     const auto class_ptr  = get_class(class_name);
-    
+
     if (class_ptr->InheritsFrom(TDirectory::Class())) {
       TDirectory * const d = read_key<TDirectory>(key);
       const char* name = d->GetName();
@@ -79,7 +81,7 @@ void copy_hists(TDirectory* dir, D*... dest) {
   while ((key = static_cast<TKey*>(nextkey()))) {
     const auto class_name = key->GetClassName();
     const auto class_ptr  = get_class(class_name);
-    
+
     if (class_ptr->InheritsFrom(TH1::Class())) {
       TH1 *h = read_key<TH1>(key);
       h->SetName(key->GetName());
@@ -98,7 +100,7 @@ void build_envelope(TDirectory* dir, TDirectory* lower, TDirectory* upper) {
   while ((key = static_cast<TKey*>(nextkey()))) {
     const auto class_name = key->GetClassName();
     const auto class_ptr  = get_class(class_name);
-    
+
     if (class_ptr->InheritsFrom(TH1::Class())) {
       TH1 *h = read_key<TH1>(key);
       const char* key_name = key->GetName();
@@ -107,10 +109,10 @@ void build_envelope(TDirectory* dir, TDirectory* lower, TDirectory* upper) {
       TH1 *hu = get<TH1>(upper,key_name);
       if (nbins != hl->GetNbinsX()) throw ivanp::exception(
         "nbins don\'t match");
-      auto* hw2  = h ->GetSumw2();
-      auto* hlw2 = hl->GetSumw2();
-      auto* huw2 = hu->GetSumw2();
-      const bool has_sumw2 = ( hw2 && hlw2 );
+      // auto* hw2  = h ->GetSumw2();
+      // auto* hlw2 = hl->GetSumw2();
+      // auto* huw2 = hu->GetSumw2();
+      // const bool has_sumw2 = ( hw2 && hlw2 );
       // test( (hw2->GetSize() == nbins) )
 
       for (int i=nbins+2; i; ) { --i;
@@ -171,6 +173,7 @@ int main(int argc, char* argv[]) {
 
   const auto fout = std::make_unique<TFile>(argv[1],"recreate");
   cout << "\033[36mOutput\033[0m  : " << fout->GetName() << endl;
+  if (fout->IsZombie()) return 1;
   TDirectory *central = fout->mkdir("central");
   TDirectory *lower   = fout->mkdir("lower");
   TDirectory *upper   = fout->mkdir("upper");
@@ -178,11 +181,29 @@ int main(int argc, char* argv[]) {
   if (single_file) {
     // ==============================================================
 
-    cerr << "Not implemented yet" << endl;
+    const auto fin = std::make_unique<TFile>(argv[2]);
+    cout << "\033[36mInput\033[0m   : " << fin->GetName() << endl;
+    if (fin->IsZombie()) return 1;
+
+    TDirectory* dir = enter(fin.get(),argv[3]);
+    cout << "\033[36mCentral\033[0m : " << dir->GetName() << endl;
+    copy_dirs(dir,central,lower,upper);
+    copy_hists(dir,central);
+
+    dir = enter(fin.get(),argv[4]);
+    cout << "\033[36mEnvelope\033[0m: " << dir->GetName() << endl;
+    copy_hists(dir,lower,upper);
+
+    for (int i=5; i<argc; ++i) {
+      dir = enter(fin.get(),argv[i]);
+      cout << "\033[36mEnvelope\033[0m: " << dir->GetName() << endl;
+      build_envelope(dir,lower,upper);
+    }
 
     // ==============================================================
   } else { // multiple files
     // ==============================================================
+
     { const auto fin1 = std::make_unique<TFile>(argv[2]);
       cout << "\033[36mCentral\033[0m : " << fin1->GetName() << endl;
       if (fin1->IsZombie()) return 1;
