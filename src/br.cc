@@ -43,7 +43,9 @@ void prt_key(TKey* key, const char* color) {
 }
 
 void prt_branch(const char* type, const char* name, const char* title) {
-  cout << "\033[35m" << type << "\033[0m " << name;
+  if (type && type[0])
+    cout << "\033[35m" << type << "\033[0m ";
+  cout << name;
   if (title)
     if (std::strcmp(name,title))
       cout << ": \033[2;49;37m" << title << "\033[0m";
@@ -64,18 +66,18 @@ void prt_tree(TTree* tree) {
     TBranch *b = static_cast<TBranch*>(bo);
 
     const char * const bcname = b->GetClassName();
+    const char * const bname = b->GetName();
     const auto nl = b->GetNleaves();
-
-    indent(b==lb);
-    if (nl>1) prt_branch( bcname, b->GetName(), b->GetTitle() );
 
     TObjArray *_l = b->GetListOfLeaves();
     TLeaf * const ll = static_cast<TLeaf*>(_l->Last());
 
-    if (nl==1) {
-      const char * const ltname = ll->GetTypeName();
-      prt_branch( (ltname ? ltname : bcname), ll->GetName(), ll->GetTitle() );
+    indent(b==lb);
+    if (nl==1 && !strcmp(bname,ll->GetName())) {
+      prt_branch( ll->GetTypeName(), ll->GetName(), ll->GetTitle() );
     } else {
+      prt_branch( bcname, bname, b->GetTitle() );
+
       ++last;
       for ( auto lo : *_l ) {
         TLeaf *l = static_cast<TLeaf*>(lo);
@@ -84,6 +86,7 @@ void prt_tree(TTree* tree) {
       } // end leaf loop
       --last;
     }
+
   } // end branch loop
   --last;
 }
@@ -113,7 +116,7 @@ bool read_dir(TDirectory* dir, bool first=true) {
       skip = read_dir(dir, false);
       if (!skip && dir->GetListOfKeys()->GetSize()>0 && next_key) {
         indent();
-        cout << "│" << endl;
+        cout << (first ? "" : "│") << endl;
         skip = true;
       }
     } else {
