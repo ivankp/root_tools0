@@ -3,6 +3,7 @@
 #include <sstream>
 #include <cstring>
 #include <vector>
+#include <unordered_set>
 
 #include <TFile.h>
 #include <TTree.h>
@@ -57,9 +58,10 @@ void prt_tree(TTree* tree) {
   ss.imbue(comma_locale);
   ss << tree->GetEntries();
   cout << " [" << ss.rdbuf() << ']' << endl;
+  
+  std::unordered_set<std::string> branch_names;
 
   ++last;
-
   TObjArray *_b = tree->GetListOfBranches();
   auto * const lb = _b->Last();
   for ( auto bo : *_b ) {
@@ -69,13 +71,19 @@ void prt_tree(TTree* tree) {
     const char * const bname = b->GetName();
     const auto nl = b->GetNleaves();
 
+    const bool dup = !branch_names.emplace(bname).second;
+
     TObjArray *_l = b->GetListOfLeaves();
     TLeaf * const ll = static_cast<TLeaf*>(_l->Last());
 
     indent(b==lb);
     if (nl==1 && !strcmp(bname,ll->GetName())) {
-      prt_branch( ll->GetTypeName(), ll->GetName(), ll->GetTitle() );
+      std::string lname(ll->GetName());
+      if (dup) lname = "\033[31m" + lname + "\033[0m";
+      prt_branch( ll->GetTypeName(), lname.c_str(), ll->GetTitle() );
     } else {
+      std::string lname(ll->GetName());
+      if (dup) lname = "\033[31m" + lname + "\033[0m";
       prt_branch( bcname, bname, b->GetTitle() );
 
       ++last;
