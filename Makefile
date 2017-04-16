@@ -27,6 +27,9 @@ L_br := $(ROOT_LIBS)
 C_hrat := $(ROOT_CFLAGS)
 L_hrat := $(ROOT_LIBS)
 
+C_gr2d := $(ROOT_CFLAGS)
+L_gr2d := $(ROOT_LIBS)
+
 C_tbrowser := $(ROOT_CFLAGS)
 L_tbrowser := $(ROOT_LIBS)
 
