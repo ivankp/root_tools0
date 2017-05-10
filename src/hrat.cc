@@ -55,19 +55,13 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  TFile *fin1 = new TFile(argv[1],"read");
-  if (fin1->IsZombie()) return 1;
-  TFile *fin2 = new TFile(argv[2],"read");
-  if (fin2->IsZombie()) return 1;
-  TFile *fout = new TFile(argv[3],"recreate");
-  if (fout->IsZombie()) return 1;
+  TFile fin1(argv[1],"read");     if (fin1.IsZombie()) return 1;
+  TFile fin2(argv[2],"read");     if (fin2.IsZombie()) return 1;
+  TFile fout(argv[3],"recreate"); if (fout.IsZombie()) return 1;
 
-  dir_loop(fin1,fin2);
+  dir_loop(&fin1,&fin2);
 
-  fout->Write();
-  delete fout;
-  delete fin2;
-  delete fin1;
+  fout.Write();
 
   return 0;
 }
