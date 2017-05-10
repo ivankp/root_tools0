@@ -24,7 +24,7 @@ int main(int argc, char* argv[]) {
   for (double x, y, z; (*is) >> x >> y >> z;)
     gr.SetPoint(gr.GetN(),x,y,z);
 
-  gr.Draw("surf1");
+  gr.Draw("surf2");
   canv.SaveAs(argv[1]);
 
   if (argc==3) delete is;
