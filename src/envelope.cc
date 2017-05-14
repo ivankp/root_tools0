@@ -190,14 +190,38 @@ int main(int argc, char* argv[]) {
     copy_dirs(dir,central,lower,upper);
     copy_hists(dir,central);
 
-    dir = enter(fin.get(),argv[4]);
-    cout << "\033[36mEnvelope\033[0m: " << dir->GetName() << endl;
-    copy_hists(dir,lower,upper);
+    if (argc==4) { // only central
 
-    for (int i=5; i<argc; ++i) {
-      dir = enter(fin.get(),argv[i]);
+      bool first = true;
+      for (TObject* key_obj : *(fin->GetListOfKeys())) {
+        TKey* const key = static_cast<TKey*>(key_obj);
+        if ( strcmp(key->GetName(),argv[3]) ) {
+          const auto class_ptr = get_class(key->GetClassName());
+          if ( class_ptr && class_ptr->InheritsFrom(TDirectory::Class()) ) {
+            TDirectory * const d = read_key<TDirectory>(key);
+            cout << "\033[36mEnvelope\033[0m: " << d->GetName() << endl;
+            if (first) {
+              copy_hists(d,lower,upper);
+              first = false;
+            } else {
+              build_envelope(d,lower,upper);
+            }
+          }
+        }
+      }
+
+    } else { // explicit list of branches
+
+      dir = enter(fin.get(),argv[4]);
       cout << "\033[36mEnvelope\033[0m: " << dir->GetName() << endl;
-      build_envelope(dir,lower,upper);
+      copy_hists(dir,lower,upper);
+
+      for (int i=5; i<argc; ++i) {
+        dir = enter(fin.get(),argv[i]);
+        cout << "\033[36mEnvelope\033[0m: " << dir->GetName() << endl;
+        build_envelope(dir,lower,upper);
+      }
+
     }
 
     // ==============================================================
