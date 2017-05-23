@@ -5,6 +5,7 @@
 #include <TApplication.h>
 #include <TBrowser.h>
 #include <TFile.h>
+#include <TStyle.h>
 
 int main(int argc, char* argv[])
 {
@@ -12,6 +13,9 @@ int main(int argc, char* argv[])
   char app_argv1[] = "l";
   char *app_argv[] = { app_argv1 };
   TApplication app("App",&app_argc,app_argv);
+
+  gStyle->SetOptStat(110010);
+  gStyle->SetPaintTextFormat(".2f");
 
   std::vector<std::unique_ptr<TFile>> files;
   files.reserve(argc-1);
