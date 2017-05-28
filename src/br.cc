@@ -56,7 +56,8 @@ void indent(bool is_last) {
 
 void prt_key(TKey* key, const char* color) {
   cout << color << key->GetClassName() << "\033[0m "
-       << key->GetName() << ';' << key->GetCycle();
+       << key->GetName()
+       << "\033[2;49;37m;" << key->GetCycle() << "\033[0m";
 }
 
 void prt_branch(const char* type, const char* name, const char* title) {
