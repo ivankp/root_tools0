@@ -12,9 +12,7 @@ namespace ivanp {
 namespace detail {
 
 template <typename T>
-inline void cat_impl(std::stringstream& ss, const T& t) {
-  ss << t;
-}
+inline void cat_impl(std::stringstream& ss, const T& t) { ss << t; }
 
 template <typename T, typename... TT>
 inline void cat_impl(std::stringstream& ss, const T& t, const TT&... tt) {

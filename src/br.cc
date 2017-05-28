@@ -1,6 +1,7 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
+#include <fstream>
 #include <cstring>
 #include <vector>
 #include <unordered_set>
@@ -11,8 +12,11 @@
 #include <TBranch.h>
 #include <TLeaf.h>
 
+#include "catstr.hh"
+
 using std::cout;
 using std::endl;
+using ivanp::cat;
 
 class comma_numpunct: public std::numpunct<char> {
 protected:
@@ -20,6 +24,17 @@ protected:
   virtual std::string do_grouping() const { return "\03"; }
 };
 std::locale comma_locale(std::locale(), new comma_numpunct());
+
+auto file_size(const char* name) {
+  std::ifstream in(name, std::ifstream::ate | std::ifstream::binary);
+  return in.tellg();
+}
+std::string file_size_str(const char* name) {
+  size_t size = file_size(name);
+  unsigned i = 0;
+  for ( ; size > 1024; ++i) size /= 1024;
+  return cat(size,' '," kMGT"[i],'B');
+}
 
 std::vector<bool> last;
 inline void operator++(decltype(last)& v) noexcept { v.push_back(false); }
@@ -40,7 +55,8 @@ void indent(bool is_last) {
 }
 
 void prt_key(TKey* key, const char* color) {
-  cout << color << key->GetClassName() << "\033[0m " << key->GetName();
+  cout << color << key->GetClassName() << "\033[0m "
+       << key->GetName() << ';' << key->GetCycle();
 }
 
 void prt_branch(const char* type, const char* name, const char* title) {
@@ -141,6 +157,8 @@ int main(int argc, char** argv) {
     cout << "usage: " << argv[0] << " file.root" << endl;
     return 0;
   }
+
+  cout << "File size: " << file_size_str(argv[1]) <<'\n'<< endl;
 
   TFile file(argv[1]);
   if (file.IsZombie()) return 1;
