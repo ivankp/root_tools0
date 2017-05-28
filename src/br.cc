@@ -30,10 +30,10 @@ auto file_size(const char* name) {
   return in.tellg();
 }
 std::string file_size_str(const char* name) {
-  size_t size = file_size(name);
+  double size = file_size(name);
   unsigned i = 0;
   for ( ; size > 1024; ++i) size /= 1024;
-  return cat(size,' '," kMGT"[i],'B');
+  return cat(std::setprecision(2),std::fixed,size,' '," kMGT"[i],'B');
 }
 
 std::vector<bool> last;
@@ -56,8 +56,10 @@ void indent(bool is_last) {
 
 void prt_key(TKey* key, const char* color) {
   cout << color << key->GetClassName() << "\033[0m "
-       << key->GetName()
-       << "\033[2;49;37m;" << key->GetCycle() << "\033[0m";
+       << key->GetName();
+  const auto cycle = key->GetCycle();
+  if (cycle!=1)
+    cout << "\033[2;49;37m;" << key->GetCycle() << "\033[0m";
 }
 
 void prt_branch(const char* type, const char* name, const char* title) {
