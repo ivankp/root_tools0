@@ -11,6 +11,7 @@
 #include <TKey.h>
 #include <TBranch.h>
 #include <TLeaf.h>
+#include <TH1.h>
 
 #include "catstr.hh"
 
@@ -118,6 +119,8 @@ void prt_tree(TTree* tree) {
   --last;
 }
 
+bool integrals = false;
+
 bool read_dir(TDirectory* dir, bool first=true) {
   bool skip = false;
   TIter next(dir->GetListOfKeys());
@@ -146,6 +149,11 @@ bool read_dir(TDirectory* dir, bool first=true) {
         cout << (first ? "" : "│") << endl;
         skip = true;
       }
+    } else if (key_class->InheritsFrom(TH1::Class())) {
+      prt_key(key,"\033[34m");
+      TH1 *h = static_cast<TH1*>(key->ReadObj());
+      cout << ' ' << h->GetIntegral();
+      cout << endl;
     } else {
       prt_key(key,"\033[34m");
       cout << endl;
@@ -156,9 +164,13 @@ bool read_dir(TDirectory* dir, bool first=true) {
 }
 
 int main(int argc, char** argv) {
-  if (argc != 2) {
+  if (argc < 2) {
     cout << "usage: " << argv[0] << " file.root" << endl;
     return 0;
+  }
+  for (int i=2; i<argc; ++i) {
+    if (!strcmp(argv[i],"--integrals"))
+      integrals = true;
   }
 
   cout << "File size: " << file_size_str(argv[1]) <<'\n'<< endl;
