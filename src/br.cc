@@ -149,14 +149,18 @@ bool read_dir(TDirectory* dir, bool first=true) {
         cout << (first ? "" : "│") << endl;
         skip = true;
       }
-    } else if (key_class->InheritsFrom(TH1::Class())) {
+    } else if (integrals && key_class->InheritsFrom(TH1::Class())) {
       prt_key(key,"\033[34m");
-      TH1 *h = static_cast<TH1*>(key->ReadObj());
-      cout << ' ' << h->GetIntegral();
+      if (integrals) {
+        TH1 *h = static_cast<TH1*>(key->ReadObj());
+        cout << ' ' << h->Integral(0,-1);
+      }
       cout << endl;
     } else {
       prt_key(key,"\033[34m");
       cout << endl;
+      const char* title = key->GetTitle();
+      if (title && title[0]!='\0') cout << '\t' << title << endl;
     }
   }
   if (!first) --last;
