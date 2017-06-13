@@ -270,6 +270,12 @@ struct hist_fmt_fcn_SetOption
   virtual void apply(TH1* h) const { h->SetOption(std::get<0>(args).c_str()); }
 };
 
+struct hist_fmt_fcn_Rebin
+: public hist_fmt_fcn_impl, private interpreted_args<Int_t> {
+  using interpreted_args::interpreted_args;
+  virtual void apply(TH1* h) const { h->Rebin(std::get<0>(args)); }
+};
+
 // ******************************************************************
 
 bool all_lower_strcmp(const boost::string_ref& s1, const char* s2) {
@@ -318,6 +324,8 @@ hist_fmt_fcn::hist_fmt_fcn(const std::string& str) {
       impl = new hist_fmt_fcn_Normalize(++tokens.begin(),tokens.end());
     } else if (all_lower_strcmp(tokens.front(),"draw")) {
       impl = new hist_fmt_fcn_SetOption(++tokens.begin(),tokens.end());
+    } else if (all_lower_strcmp(tokens.front(),"rebin")) {
+      impl = new hist_fmt_fcn_Rebin(++tokens.begin(),tokens.end());
     } else throw std::runtime_error("unknown function "+tokens.front().to_string());
   } catch (const std::exception& e) {
     throw std::runtime_error("in "+str+": "+e.what());
