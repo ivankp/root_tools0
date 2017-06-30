@@ -188,7 +188,7 @@ int main(int argc, char **argv)
        "gStyle->SetPaintTextFormat()\n+ TH1::Draw(\"TEXT\")")
 
       ("colors", po::value(color.v_ptr())->multitoken()->
-        default_value({602,46,8,90,44,52}, "{602,46,8,90,44,52}"),
+        default_value({602,46,8,90,52,41}, "{602,46,8,90,44,52}"),
        "histograms colors")
       ("widths", po::value(width.v_ptr())->multitoken()->
         default_value({2}, "{2}"),
