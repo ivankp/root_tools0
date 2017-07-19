@@ -41,6 +41,9 @@ L_envelope := $(ROOT_LIBS)
 C_hist_binning := $(ROOT_CFLAGS) -Isrc
 L_hist_binning := $(ROOT_LIBS)
 
+C_hed := $(ROOT_CFLAGS) -Isrc
+L_hed := $(ROOT_LIBS) -lboost_regex
+
 SRC := src
 BIN := bin
 BLD := .build
