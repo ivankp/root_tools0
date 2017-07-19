@@ -61,7 +61,7 @@ void scale_fcn(const char* arg, const std::vector<unsigned>& ds,
     "function syntax: scale,double,string=\"\"");
   fs.emplace_back(
     [ c1 = lexical_cast<double>(arg+ds[0]+1,ds[1]-ds[0]-1),
-      opt = (n==2 ? "" : arg+ds[2]+1)
+      opt = (n==2 ? "" : arg+ds[1]+1)
     ](TH1* h){
       h->Scale(c1,opt);
     }
@@ -74,9 +74,12 @@ struct {
     boost::regex re;
     std::string sub;
     std::vector< std::function<void(TH1*)> > fs;
+    bool select;
+
     template <typename Reg, typename Sub>
-    expr(Reg&& re, Sub&& sub)
-    : re(std::forward<Reg>(re)), sub(std::forward<Sub>(sub)) { }
+    expr(Reg&& re, Sub&& sub, bool s)
+    : re(std::forward<Reg>(re)), sub(std::forward<Sub>(sub)), fs(),
+      select(s) { }
   };
   std::vector<std::unique_ptr<expr>> es;
 
@@ -87,18 +90,19 @@ struct {
     std::string name(name1);
     boost::smatch matches;
     for (const auto& e : es) {
-      if (!boost::regex_match(name, matches, e->re)) return;
-      if (e->sub.size()) {
-        auto name2 = boost::regex_replace(name, e->re, e->sub,
-          boost::match_default | boost::format_sed);
-        if (!name2.size()) throw std::runtime_error(cat(
-          "histogram name \"",name2,"\" is blank after substitution"));
-        name = std::move(name2);
-      }
-      for (auto& f : e->fs) f(h);
+      if (boost::regex_match(name, matches, e->re)) {
+        if (e->sub.size()) {
+          auto name2 = boost::regex_replace(name, e->re, e->sub,
+            boost::match_default | boost::format_sed);
+          if (!name2.size()) throw std::runtime_error(cat(
+            "histogram name \"",name2,"\" is blank after substitution"));
+          name = std::move(name2);
+        }
+        for (auto& f : e->fs) f(h);
+      } else if (e->select) return;
     }
     cout << name1 << " => " << name << endl;
-    TDirectory *cur = gDirectory, *dir;
+    TDirectory *cur = gDirectory, *dir = cur;
     for (unsigned i=0; i<name.size(); ++i) {
       if (name[i]!='/') continue;
       const auto dir_name = name.substr(0,i);
@@ -112,11 +116,15 @@ struct {
 
     h->SetDirectory(dir);
     h->SetName(name.c_str());
-    // h->Write();
   }
 
   bool add_expr(const char* arg) {
     char c = arg[0];
+    const bool s = (c=='s');
+    if (s) {
+      ++arg;
+      c = arg[0];
+    }
     if (!(c=='/' || c=='|' || c==':')) return false;
     const char d = c;
     std::string re;
@@ -126,7 +134,7 @@ struct {
     }
     re.assign(arg+1, c==d ? a-1 : a);
     if (re.size()==0) throw std::runtime_error("blank regex");
-    es.emplace_back(new expr(std::move(re),a));
+    es.emplace_back(new expr(std::move(re),a,s));
     return true;
   }
 
