@@ -1,7 +1,7 @@
 CXX := g++
 STD := -std=c++11
 DF := $(STD)
-CF := $(STD) -Wall -O3 -flto
+CF := $(STD) -Wall -O3 -flto -Isrc
 LF := $(STD) -flto
 
 ROOT_CFLAGS := $(shell root-config --cflags)
@@ -35,13 +35,16 @@ L_tbrowser := $(ROOT_LIBS)
 
 C_hist_fmt_re := $(ROOT_CFLAGS)
 
-C_envelope := $(ROOT_CFLAGS) -Isrc
+C_envelope := $(ROOT_CFLAGS)
 L_envelope := $(ROOT_LIBS)
 
-C_hist_binning := $(ROOT_CFLAGS) -Isrc
+C_hist_binning := $(ROOT_CFLAGS)
 L_hist_binning := $(ROOT_LIBS)
 
-C_hed := $(ROOT_CFLAGS) -Isrc
+C_histdump := $(ROOT_CFLAGS)
+L_histdump := $(ROOT_LIBS)
+
+C_hed := $(ROOT_CFLAGS)
 L_hed := $(ROOT_LIBS) -lboost_regex
 
 SRC := src

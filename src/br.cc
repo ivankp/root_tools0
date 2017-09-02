@@ -153,7 +153,7 @@ bool read_dir(TDirectory* dir, bool first=true) {
       prt_key(key,"\033[34m");
       if (integrals) {
         TH1 *h = static_cast<TH1*>(key->ReadObj());
-        cout << ' ' << h->Integral(0,-1);
+        cout << cat(' ',std::fixed,std::setprecision(6),h->Integral(0,-1));
       }
       cout << endl;
     } else {
