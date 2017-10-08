@@ -1,58 +1,41 @@
 CXX := g++
-STD := -std=c++11
-DF := $(STD)
-CF := $(STD) -Wall -O3 -flto
+STD := -std=c++14
+DF := $(STD) -Isrc
+CF := $(STD) -Wall -O3 -flto -Isrc -fmax-errors=3
+# CF := $(STD) -Wall -g -Iinclude -fmax-errors=3
 LF := $(STD) -flto
+
+ifneq (0, $(words $(LIBRARY_PATH)))
+LF += $(shell sed 's/^/-L/;s/:/ -L/g' <<< "$$LIBRARY_PATH")
+endif
 
 ROOT_CFLAGS := $(shell root-config --cflags)
 ROOT_LIBS   := $(shell root-config --libs)
 
 # RPATH
 rpath_script := ldd `root-config --libdir`/libTreePlayer.so \
-  | sed -n 's/.*=> \(.*\)\/.\+\.so[^ ]* (.*/\1/p' \
-  | sort | uniq \
-  | sed '/^\/lib/d;/^\/usr\/lib/d' \
-  | sed 's/^/-Wl,-rpath=/'
+  | sed -nr 's|.*=> (.+)/.+\.so[.0-9]* \(.*|\1|p' \
+  | sort -u \
+  | sed -nr '/^(\/usr)?\/lib/!s/^/-Wl,-rpath=/p'
 ROOT_LIBS += $(shell $(rpath_script))
 
-C_rxplot := $(ROOT_CFLAGS)
-L_rxplot := $(ROOT_LIBS) -lboost_program_options -lboost_regex
+CF += $(ROOT_CFLAGS)
+LF += $(ROOT_LIBS)
 
-C_subtuple := $(ROOT_CFLAGS)
-L_subtuple := $(ROOT_LIBS) -lTreePlayer -lboost_regex
-
-C_br := $(ROOT_CFLAGS)
-L_br := $(ROOT_LIBS)
-
-C_hrat := $(ROOT_CFLAGS)
-L_hrat := $(ROOT_LIBS)
-
-C_gr2d := $(ROOT_CFLAGS)
-L_gr2d := $(ROOT_LIBS)
-
-C_tbrowser := $(ROOT_CFLAGS)
-L_tbrowser := $(ROOT_LIBS)
-
-C_hist_fmt_re := $(ROOT_CFLAGS)
-
-C_envelope := $(ROOT_CFLAGS) -Isrc
-L_envelope := $(ROOT_LIBS)
-
-C_hist_binning := $(ROOT_CFLAGS) -Isrc
-L_hist_binning := $(ROOT_LIBS)
-
-C_hed := $(ROOT_CFLAGS) -Isrc
-L_hed := $(ROOT_LIBS) -lboost_regex
+L_rxplot := -lboost_program_options -lboost_regex
+L_subtuple := -lTreePlayer -lboost_regex
+L_hed := -lboost_regex
 
 SRC := src
 BIN := bin
 BLD := .build
+EXT := .cc
 
-SRCS := $(shell find $(SRC) -type f -name '*.cc')
-DEPS := $(patsubst $(SRC)%.cc,$(BLD)%.d,$(SRCS))
+SRCS := $(shell find $(SRC) -type f -name '*$(EXT)')
+DEPS := $(patsubst $(SRC)/%$(EXT),$(BLD)/%.d,$(SRCS))
 
-GREP_EXES := grep -rl '^ *int \+main *(' $(SRC)
-EXES := $(patsubst $(SRC)%.cc,$(BIN)%,$(shell $(GREP_EXES)))
+GREP_EXES := grep -rl '^ *int \+main *(' $(SRC) --include='*$(EXT)'
+EXES := $(patsubst $(SRC)%$(EXT),$(BIN)%,$(shell $(GREP_EXES)))
 
 NODEPS := clean
 .PHONY: all clean
@@ -67,17 +50,22 @@ ifeq (0, $(words $(findstring $(MAKECMDGOALS), $(NODEPS))))
 -include $(DEPS)
 endif
 
-$(DEPS): $(BLD)/%.d: $(SRC)/%.cc | $(BLD)
+.SECONDEXPANSION:
+
+$(DEPS): $(BLD)/%.d: $(SRC)/%$(EXT) | $(BLD)/$$(dir %)
 	$(CXX) $(DF) -MM -MT '$(@:.d=.o)' $< -MF $@
 
 $(BLD)/%.o: | $(BLD)
-	$(CXX) $(CF) $(C_$*) -c $(filter %.cc,$^) -o $@
+	$(CXX) $(CF) $(C_$*) -c $(filter %$(EXT),$^) -o $@
 
 $(BIN)/%: $(BLD)/%.o | $(BIN)
 	$(CXX) $(LF) $(filter %.o,$^) -o $@ $(L_$*)
 
-$(BLD) $(BIN):
-	mkdir $@
+$(BIN):
+	mkdir -p $@
+
+$(BLD)/%/:
+	mkdir -p $@
 
 clean:
 	@rm -rfv $(BLD) $(BIN)
