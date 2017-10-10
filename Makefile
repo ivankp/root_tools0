@@ -26,7 +26,7 @@ rpath_script := ldd $(shell root-config --libdir)/libTreePlayer.so \
   | sed -nr 's|.*=> (.+)/.+\.so[.0-9]* \(.*|\1|p' \
   | sort -u \
   | sed -nr '/^(\/usr)?\/lib/!s/^/-Wl,-rpath=/p'
-ROOT_LIBS += $(shell $(rpath_script))
+ROOT_LDFLAGS += $(shell $(rpath_script))
 
 CXXFLAGS += $(ROOT_CXXFLAGS)
 LDFLAGS += $(ROOT_LDFLAGS)
