@@ -63,6 +63,17 @@ void prt_key(TKey* key, const char* color) {
     cout << "\033[2;49;37m;" << key->GetCycle() << "\033[0m";
 }
 
+std::multimap<std::string,std::string> aliases;
+
+void read_aliases(TTree* tree) {
+  aliases.clear();
+  for (auto* obj : *tree->GetListOfAliases()) {
+    const char* alias  = obj->GetName();
+    const char* branch = tree->GetAlias(alias);
+    aliases.emplace(branch,alias);
+  }
+}
+
 void prt_branch(const char* type, const char* name, const char* title) {
   if (type && type[0])
     cout << "\033[35m" << type << "\033[0m ";
@@ -70,6 +81,15 @@ void prt_branch(const char* type, const char* name, const char* title) {
   if (title)
     if (std::strcmp(name,title))
       cout << ": \033[2;49;37m" << title << "\033[0m";
+  const auto range = aliases.equal_range(name);
+  if (range.first!=aliases.end()) {
+    cout << " { ";
+    for (auto it=range.first; it!=range.second; ++it) {
+      if (it!=range.first) cout << ", ";
+      cout << it->second;
+    }
+    cout << " }";
+  }
   cout << endl;
 }
 
@@ -78,7 +98,8 @@ void prt_tree(TTree* tree) {
   ss.imbue(comma_locale);
   ss << tree->GetEntries();
   cout << " [" << ss.rdbuf() << ']' << endl;
-  
+
+  read_aliases(tree);
   std::unordered_set<std::string> branch_names;
 
   ++last;

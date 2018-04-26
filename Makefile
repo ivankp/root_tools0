@@ -1,9 +1,9 @@
 CXX := g++
 STD := -std=c++14
 CPPFLAGS := $(STD) -Isrc
-CXXFLAGS := $(STD) -Wall -O3 -flto -Isrc -fmax-errors=3
+CXXFLAGS := $(STD) -Wall -O3 -Isrc -fmax-errors=3
 # CXXFLAGS := $(STD) -Wall -g -Iinclude -fmax-errors=3
-LDFLAGS := $(STD) -O3 -flto
+LDFLAGS := $(STD) -O3
 LDLIBS :=
 
 SRC := src
