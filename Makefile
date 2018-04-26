@@ -1,9 +1,11 @@
+SHELL := bash
+
 CXX := g++
 STD := -std=c++14
 CPPFLAGS := $(STD) -Isrc
 CXXFLAGS := $(STD) -Wall -O3 -Isrc -fmax-errors=3
 # CXXFLAGS := $(STD) -Wall -g -Iinclude -fmax-errors=3
-LDFLAGS := $(STD) -O3
+LDFLAGS :=
 LDLIBS :=
 
 SRC := src
