@@ -55,12 +55,17 @@ void indent(bool is_last) {
   }
 }
 
-void prt_key(TKey* key, const char* color) {
+void print(TKey* key, const char* color) {
   cout << color << key->GetClassName() << "\033[0m "
        << key->GetName();
   const auto cycle = key->GetCycle();
   if (cycle!=1)
     cout << "\033[2;49;37m;" << key->GetCycle() << "\033[0m";
+}
+
+void print(TObject* obj, const char* color) {
+  cout << color << obj->ClassName() << "\033[0m "
+       << obj->GetName();
 }
 
 void prt_branch(const char* type, const char* name, const char* title) {
@@ -73,12 +78,12 @@ void prt_branch(const char* type, const char* name, const char* title) {
   cout << endl;
 }
 
-void prt_tree(TTree* tree) {
+void print(TTree* tree) {
   std::stringstream ss;
   ss.imbue(comma_locale);
   ss << tree->GetEntries();
   cout << " [" << ss.rdbuf() << ']' << endl;
-  
+
   std::unordered_set<std::string> branch_names;
 
   ++last;
@@ -121,46 +126,94 @@ void prt_tree(TTree* tree) {
 
 bool integrals = false;
 
-bool read_dir(TDirectory* dir, bool first=true) {
-  bool skip = false;
-  TIter next(dir->GetListOfKeys());
-  TKey *key, *next_key = static_cast<TKey*>(next());
-  if (!first) ++last;
-  while ((key = next_key)) {
-    TClass *key_class = TClass::GetClass(key->GetClassName());
-    indent(!(next_key = static_cast<TKey*>(next())));
+template <typename T>
+inline T* key_cast(TKey* key) {
+  return dynamic_cast<T*>(key->ReadObj());
+}
+template <typename T>
+inline T* key_cast(TObject* obj) {
+  return dynamic_cast<T*>(obj);
+}
 
-    if (!key_class) {
-      prt_key(key,"\033[33m");
+inline TClass* get_class(TKey* key) {
+  return TClass::GetClass(key->GetClassName());
+}
+inline TClass* get_class(TObject* obj) {
+  return TClass::GetClass(obj->ClassName());
+}
+
+template <typename T>
+inline bool inherits_from(TClass* c) {
+  return c->InheritsFrom(T::Class());
+}
+
+template <typename T>
+class list_cast {
+  TList* list;
+  using list_iter = decltype(list->begin());
+  class iter {
+    list_iter it;
+  public:
+    iter(list_iter it): it(it) { }
+    inline T* operator* () noexcept { return static_cast<T*>(*it); }
+    inline T* operator->() noexcept { return static_cast<T*>(*it); }
+    inline iter& operator++() noexcept(noexcept(++it)) { ++it; return *this; }
+    inline bool operator==(const iter& r) const noexcept(noexcept(it==r.it))
+    { return it == r.it; }
+    inline bool operator!=(const iter& r) const noexcept(noexcept(it!=r.it))
+    { return it != r.it; }
+  };
+public:
+  list_cast(TList* list): list(list) { }
+  iter begin() { return list->begin(); }
+  iter   end() { return list->  end(); }
+};
+
+template <bool IsKeys=true>
+bool print_list(TList* list, bool first=true) {
+  bool skip = false;
+  if (!first) ++last;
+  using type = std::conditional_t<IsKeys,TKey,TObject>;
+  for (type* x : list_cast<type>(list)) {
+    const bool last_in_list = !list->After(x);
+    indent(last_in_list);
+    TClass *_class = get_class(x);
+
+    if (!_class) {
+      print(x,"\033[33m");
       cout << endl;
-    } else if (key_class->InheritsFrom(TTree::Class())) { // Found a tree
-      prt_key(key,"\033[1;49;92m");
-      prt_tree(dynamic_cast<TTree*>(key->ReadObj()));
+    } else if (inherits_from<TTree>(_class)) {
+      print(x,"\033[1;49;92m");
+      print(key_cast<TTree>(x));
       indent();
       skip = true;
       cout << endl;
-    } else if (key_class->InheritsFrom(TDirectory::Class())) {
-      prt_key(key,"\033[1;49;34m");
+    } else if (inherits_from<TDirectory>(_class)) {
+      print(x,"\033[1;49;34m");
       cout << endl;
-      const auto dir = dynamic_cast<TDirectory*>(key->ReadObj());
-      skip = read_dir(dir, false);
-      if (!skip && dir->GetListOfKeys()->GetSize()>0 && next_key) {
+      TList *list = key_cast<TDirectory>(x)->GetListOfKeys();
+      skip = print_list(list, false);
+      if (!skip && list->GetSize()>0 && !last_in_list) {
         indent();
         cout << (first ? "" : "│") << endl;
         skip = true;
       }
-    } else if (key_class->InheritsFrom(TH1::Class())) {
-      prt_key(key,"\033[34m");
-      if (integrals) {
-        TH1 *h = static_cast<TH1*>(key->ReadObj());
+    } else if (inherits_from<TH1>(_class)) {
+      print(x,"\033[34m");
+      TH1 *h = key_cast<TH1>(x);
+      if (integrals)
         cout << cat(' ',std::fixed,std::setprecision(6),h->Integral(0,-1));
-      }
+      TList *fs = h->GetListOfFunctions();
       cout << endl;
+      print_list<false>(fs, false);
     } else {
-      prt_key(key,"\033[34m");
+      print(x,"\033[34m");
       cout << endl;
-      const char* title = key->GetTitle();
-      if (title && title[0]!='\0') cout << '\t' << title << endl;
+      const char* title = x->GetTitle();
+      if (title && title[0]!='\0') {
+        if (!last_in_list) cout << "|";
+        cout << '\t' << title << endl;
+      }
     }
   }
   if (!first) --last;
@@ -182,7 +235,7 @@ int main(int argc, char** argv) {
   TFile file(argv[1]);
   if (file.IsZombie()) return 1;
 
-  read_dir(&file);
+  print_list(file.GetListOfKeys());
 
   return 0;
 }
