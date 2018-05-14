@@ -5,6 +5,7 @@
 #include <cstring>
 #include <vector>
 #include <unordered_set>
+#include <map>
 
 #include <TFile.h>
 #include <TTree.h>
@@ -55,6 +56,10 @@ void indent(bool is_last) {
   }
 }
 
+void print(TObject* obj, const char* color) {
+  cout << color << obj->ClassName() << "\033[0m " << obj->GetName();
+}
+
 void print(TKey* key, const char* color) {
   cout << color << key->GetClassName() << "\033[0m "
        << key->GetName();
@@ -63,9 +68,16 @@ void print(TKey* key, const char* color) {
     cout << "\033[2;49;37m;" << key->GetCycle() << "\033[0m";
 }
 
-void print(TObject* obj, const char* color) {
-  cout << color << obj->ClassName() << "\033[0m "
-       << obj->GetName();
+std::multimap<std::string,std::string> aliases;
+
+void read_aliases(TTree* tree) {
+  aliases.clear();
+  auto* list = tree->GetListOfAliases();
+  if (list) for (auto* obj : *list) {
+    const char* alias  = obj->GetName();
+    const char* branch = tree->GetAlias(alias);
+    aliases.emplace(branch,alias);
+  }
 }
 
 void prt_branch(const char* type, const char* name, const char* title) {
@@ -75,6 +87,17 @@ void prt_branch(const char* type, const char* name, const char* title) {
   if (title)
     if (std::strcmp(name,title))
       cout << ": \033[2;49;37m" << title << "\033[0m";
+  if (!aliases.empty()) {
+    const auto range = aliases.equal_range(name);
+    if (range.first!=aliases.end()) {
+      cout << " { ";
+      for (auto it=range.first; it!=range.second; ++it) {
+        if (it!=range.first) cout << ", ";
+        cout << it->second;
+      }
+      cout << " }";
+    }
+  }
   cout << endl;
 }
 
@@ -84,6 +107,7 @@ void print(TTree* tree) {
   ss << tree->GetEntries();
   cout << " [" << ss.rdbuf() << ']' << endl;
 
+  read_aliases(tree);
   std::unordered_set<std::string> branch_names;
 
   ++last;
